@@ -98,6 +98,8 @@ public sealed class ClinicQueryTests
         int year, int month, int day, int roomNumber, int[] expectedIds)
     {
         var asOfDate = new DateOnly(year, month, day);
+        // The seed shifts every appointment relative to the supplied month.
+        // Expected IDs stay the same; the calendar boundaries change for each case.
         var data = ClinicSeed.Create(asOfDate);
         var monthStart = new DateTime(asOfDate.Year, asOfDate.Month, 1);
         var nextMonthStart = monthStart.AddMonths(1);
