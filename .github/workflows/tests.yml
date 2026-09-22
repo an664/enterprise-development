@@ -2,6 +2,7 @@ name: Tests
 
 on:
   push:
+    branches: [main, lab1]
   pull_request:
 
 permissions:
