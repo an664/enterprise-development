@@ -1,15 +1,37 @@
 namespace VeterinaryClinic.Models;
 
-/// <summary>A pet's appointment with a veterinarian; the domain contract.</summary>
-public sealed class Appointment
+/// <summary>
+/// Запись питомца на приём к ветеринару.
+/// </summary>
+public class Appointment
 {
-    public required int Id { get; init; }
-    public required Pet Pet { get; init; }
-    public required Veterinarian Veterinarian { get; init; }
+    /// <summary>
+    /// Идентификатор приёма.
+    /// </summary>
+    public required int Id { get; set; }
 
-    /// <summary>Date and time in the clinic's local time zone.</summary>
-    public required DateTime StartsAt { get; init; }
+    /// <summary>
+    /// Питомец, записанный на приём.
+    /// </summary>
+    public required Pet Pet { get; set; }
 
-    public required int RoomNumber { get; init; }
-    public required bool IsFollowUp { get; init; }
+    /// <summary>
+    /// Ветеринар, проводящий приём.
+    /// </summary>
+    public required Veterinarian Veterinarian { get; set; }
+
+    /// <summary>
+    /// Дата и время приёма в часовом поясе клиники.
+    /// </summary>
+    public required DateTime StartsAt { get; set; }
+
+    /// <summary>
+    /// Номер кабинета.
+    /// </summary>
+    public required string RoomNumber { get; set; }
+
+    /// <summary>
+    /// Признак повторного приёма.
+    /// </summary>
+    public bool IsFollowUp { get; set; }
 }

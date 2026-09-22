@@ -1,11 +1,37 @@
 namespace VeterinaryClinic.Models;
 
-public sealed class Veterinarian
+/// <summary>
+/// Ветеринар клиники.
+/// </summary>
+public class Veterinarian
 {
-    public required int Id { get; init; }
-    public required string PassportNumber { get; init; }
-    public required string FullName { get; init; }
-    public required int BirthYear { get; init; }
-    public required Specialization Specialization { get; init; }
-    public required int ExperienceYears { get; init; }
+    /// <summary>
+    /// Идентификатор ветеринара.
+    /// </summary>
+    public required int Id { get; set; }
+
+    /// <summary>
+    /// Номер паспорта ветеринара.
+    /// </summary>
+    public required string PassportNumber { get; set; }
+
+    /// <summary>
+    /// Фамилия, имя и отчество ветеринара.
+    /// </summary>
+    public required string FullName { get; set; }
+
+    /// <summary>
+    /// Год рождения ветеринара.
+    /// </summary>
+    public required int BirthYear { get; set; }
+
+    /// <summary>
+    /// Специализация ветеринара.
+    /// </summary>
+    public required Specialization Specialization { get; set; }
+
+    /// <summary>
+    /// Стаж работы ветеринара в годах.
+    /// </summary>
+    public int ExperienceYears { get; set; }
 }

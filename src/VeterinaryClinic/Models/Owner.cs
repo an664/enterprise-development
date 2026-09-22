@@ -1,9 +1,27 @@
 namespace VeterinaryClinic.Models;
 
-public sealed class Owner
+/// <summary>
+/// Владелец питомцев.
+/// </summary>
+public class Owner
 {
-    public required int Id { get; init; }
-    public required string FullName { get; init; }
-    public required string Address { get; init; }
-    public required string Phone { get; init; }
+    /// <summary>
+    /// Идентификатор владельца.
+    /// </summary>
+    public required int Id { get; set; }
+
+    /// <summary>
+    /// Фамилия, имя и отчество владельца.
+    /// </summary>
+    public required string FullName { get; set; }
+
+    /// <summary>
+    /// Адрес владельца.
+    /// </summary>
+    public required string Address { get; set; }
+
+    /// <summary>
+    /// Телефон владельца.
+    /// </summary>
+    public required string Phone { get; set; }
 }
