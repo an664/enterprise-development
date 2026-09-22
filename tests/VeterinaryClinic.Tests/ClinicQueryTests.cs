@@ -5,6 +5,7 @@ namespace VeterinaryClinic.Tests;
 /// <summary>
 /// Проверяет запросы к данным ветеринарной клиники.
 /// </summary>
+/// <param name="fixture">Общие данные для тестов.</param>
 public class ClinicQueryTests(ClinicFixture fixture) : IClassFixture<ClinicFixture>
 {
     /// <summary>
@@ -26,6 +27,8 @@ public class ClinicQueryTests(ClinicFixture fixture) : IClassFixture<ClinicFixtu
     /// <summary>
     /// Проверяет отбор врачей по виду животных.
     /// </summary>
+    /// <param name="species">Выбранный вид животных.</param>
+    /// <param name="expectedIds">Ожидаемые идентификаторы врачей.</param>
     [Theory]
     [InlineData(AnimalSpecies.Cat, new[] { 1, 2 })]
     [InlineData(AnimalSpecies.Dog, new[] { 3, 4 })]
@@ -69,6 +72,8 @@ public class ClinicQueryTests(ClinicFixture fixture) : IClassFixture<ClinicFixtu
     /// <summary>
     /// Проверяет число повторных приёмов питомцев выбранной породы.
     /// </summary>
+    /// <param name="breedId">Идентификатор выбранной породы.</param>
+    /// <param name="expectedCount">Ожидаемое число повторных приёмов.</param>
     [Theory]
     [InlineData(1, 4)]
     [InlineData(2, 1)]
@@ -111,6 +116,11 @@ public class ClinicQueryTests(ClinicFixture fixture) : IClassFixture<ClinicFixtu
     /// <summary>
     /// Проверяет приёмы выбранного кабинета за месяц от указанной даты.
     /// </summary>
+    /// <param name="year">Год начала периода.</param>
+    /// <param name="month">Месяц начала периода.</param>
+    /// <param name="day">День начала периода.</param>
+    /// <param name="roomNumber">Номер выбранного кабинета.</param>
+    /// <param name="expectedIds">Ожидаемые идентификаторы приёмов.</param>
     [Theory]
     [InlineData(2026, 9, 15, "101А", new[] { 15, 1, 2 })]
     [InlineData(2026, 9, 15, "102", new[] { 3, 5 })]

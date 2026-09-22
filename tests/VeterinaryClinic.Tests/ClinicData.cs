@@ -11,7 +11,7 @@ namespace VeterinaryClinic.Tests;
 /// <param name="Specializations">Специализации врачей.</param>
 /// <param name="Veterinarians">Ветеринарные врачи.</param>
 /// <param name="Appointments">Записи на приём.</param>
-internal sealed record ClinicData(
+internal record ClinicData(
     IReadOnlyList<Breed> Breeds,
     IReadOnlyList<Owner> Owners,
     IReadOnlyList<Pet> Pets,
