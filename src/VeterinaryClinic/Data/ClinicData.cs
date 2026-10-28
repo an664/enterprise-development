@@ -1,9 +1,9 @@
 using VeterinaryClinic.Models;
 
-namespace VeterinaryClinic.Tests;
+namespace VeterinaryClinic.Data;
 
 /// <summary>
-/// Набор данных ветеринарной клиники для тестов.
+/// Набор данных ветеринарной клиники.
 /// </summary>
 /// <param name="Breeds">Породы животных.</param>
 /// <param name="Owners">Владельцы питомцев.</param>
@@ -11,7 +11,7 @@ namespace VeterinaryClinic.Tests;
 /// <param name="Specializations">Специализации врачей.</param>
 /// <param name="Veterinarians">Ветеринарные врачи.</param>
 /// <param name="Appointments">Записи на приём.</param>
-internal record ClinicData(
+public record ClinicData(
     IReadOnlyList<Breed> Breeds,
     IReadOnlyList<Owner> Owners,
     IReadOnlyList<Pet> Pets,

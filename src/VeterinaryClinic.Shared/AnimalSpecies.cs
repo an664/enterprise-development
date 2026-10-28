@@ -1,4 +1,4 @@
-namespace VeterinaryClinic.Models;
+namespace VeterinaryClinic.Shared;
 
 /// <summary>
 /// Биологический вид животного.

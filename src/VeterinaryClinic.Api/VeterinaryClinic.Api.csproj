@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../VeterinaryClinic.Application/VeterinaryClinic.Application.csproj" />
+    <ProjectReference Include="../VeterinaryClinic.Infrastructure/VeterinaryClinic.Infrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.3.1" />
+  </ItemGroup>
+</Project>

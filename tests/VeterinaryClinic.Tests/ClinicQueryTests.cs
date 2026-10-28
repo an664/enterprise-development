@@ -1,3 +1,4 @@
+using VeterinaryClinic.Shared;
 using VeterinaryClinic.Models;
 
 namespace VeterinaryClinic.Tests;

@@ -1,8 +1,14 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/VeterinaryClinic/VeterinaryClinic.csproj" />
+    <Project Path="src/VeterinaryClinic.Shared/VeterinaryClinic.Shared.csproj" />
+    <Project Path="src/VeterinaryClinic.Contracts/VeterinaryClinic.Contracts.csproj" />
+    <Project Path="src/VeterinaryClinic.Application/VeterinaryClinic.Application.csproj" />
+    <Project Path="src/VeterinaryClinic.Infrastructure/VeterinaryClinic.Infrastructure.csproj" />
+    <Project Path="src/VeterinaryClinic.Api/VeterinaryClinic.Api.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/VeterinaryClinic.Tests/VeterinaryClinic.Tests.csproj" />
+    <Project Path="tests/VeterinaryClinic.Api.Tests/VeterinaryClinic.Api.Tests.csproj" />
   </Folder>
 </Solution>
