@@ -3,9 +3,9 @@ using Microsoft.Extensions.Logging;
 using VeterinaryClinic.Contracts.Appointments;
 using VeterinaryClinic.Contracts.Specializations;
 using VeterinaryClinic.Contracts.Veterinarians;
-using VeterinaryClinic.Data;
-using VeterinaryClinic.Models;
-using VeterinaryClinic.Repositories;
+using VeterinaryClinic.Domain.Exceptions;
+using VeterinaryClinic.Domain.Models;
+using VeterinaryClinic.Domain.Repositories;
 
 namespace VeterinaryClinic.Application.Services;
 
@@ -15,140 +15,117 @@ namespace VeterinaryClinic.Application.Services;
 /// <param name="repository">Репозиторий ветеринаров.</param>
 /// <param name="specializations">Репозиторий специализаций.</param>
 /// <param name="appointments">Репозиторий приёмов.</param>
-/// <param name="synchronization">Общая блокировка связанных данных.</param>
 /// <param name="logger">Журнал операций.</param>
 public class VeterinarianService(
     IVeterinarianRepository repository,
     ISpecializationRepository specializations,
     IAppointmentRepository appointments,
-    ClinicLock synchronization,
     ILogger<VeterinarianService> logger) : IVeterinarianService
 {
     /// <inheritdoc />
-    public IReadOnlyList<VeterinarianDto> GetAll()
+    public async Task<IReadOnlyList<VeterinarianDto>> GetAllAsync(CancellationToken cancellationToken)
     {
-        lock (synchronization.SyncRoot)
-        {
-            logger.LogDebug("Чтение списка ветеринаров");
-            return [.. repository.GetAll().Select(ClinicMapping.ToDto)];
-        }
+        logger.LogDebug("Чтение списка ветеринаров");
+        var records = await repository.GetAllAsync(cancellationToken);
+        return [.. records.Select(ClinicMapping.ToDto)];
     }
 
     /// <inheritdoc />
-    public VeterinarianDto GetById(int id)
+    public async Task<VeterinarianDto> GetByIdAsync(int id, CancellationToken cancellationToken)
     {
-        lock (synchronization.SyncRoot)
-        {
-            logger.LogDebug("Чтение ветеринара {Id}", id);
-            return ClinicMapping.ToDto(Find(id));
-        }
+        logger.LogDebug("Чтение ветеринара {Id}", id);
+        return ClinicMapping.ToDto(await FindAsync(id, cancellationToken));
     }
 
     /// <inheritdoc />
-    public VeterinarianDto Create(VeterinarianRequest request)
+    public async Task<VeterinarianDto> CreateAsync(VeterinarianRequest request, CancellationToken cancellationToken)
     {
-        lock (synchronization.SyncRoot)
-        {
-            var specialization = specializations.GetById(request.SpecializationId)
-                ?? throw new EntityNotFoundException("Связанная запись специализации не найдена.");
-            if (request.BirthYear > DateTime.Today.Year
-                || request.ExperienceYears > DateTime.Today.Year - request.BirthYear)
-            {
-                throw new ValidationException("Год рождения или стаж ветеринара указан неверно.");
-            }
-
-            var entity = new Veterinarian
-            {
-                Id = 0,
-                PassportNumber = request.PassportNumber,
-                FullName = request.FullName,
-                BirthYear = request.BirthYear,
-                Specialization = specialization,
-                ExperienceYears = request.ExperienceYears
-            };
-
-            var created = repository.Add(entity);
-            logger.LogInformation("Создана запись ветеринара {Id}", created.Id);
-            return ClinicMapping.ToDto(created);
-        }
+        var entity = await BuildVeterinarianAsync(0, request, cancellationToken);
+        var created = await repository.AddAsync(entity, cancellationToken);
+        logger.LogInformation("Создана запись ветеринара {Id}", created.Id);
+        return ClinicMapping.ToDto(created);
     }
 
     /// <inheritdoc />
-    public void Update(int id, VeterinarianRequest request)
+    public async Task UpdateAsync(int id, VeterinarianRequest request, CancellationToken cancellationToken)
     {
-        lock (synchronization.SyncRoot)
+        _ = await FindAsync(id, cancellationToken);
+        var entity = await BuildVeterinarianAsync(id, request, cancellationToken);
+
+        if (!await repository.UpdateAsync(entity, cancellationToken))
         {
-            _ = Find(id);
-            var specialization = specializations.GetById(request.SpecializationId)
-                ?? throw new EntityNotFoundException("Связанная запись специализации не найдена.");
-            if (request.BirthYear > DateTime.Today.Year
-                || request.ExperienceYears > DateTime.Today.Year - request.BirthYear)
-            {
-                throw new ValidationException("Год рождения или стаж ветеринара указан неверно.");
-            }
-
-            var entity = new Veterinarian
-            {
-                Id = id,
-                PassportNumber = request.PassportNumber,
-                FullName = request.FullName,
-                BirthYear = request.BirthYear,
-                Specialization = specialization,
-                ExperienceYears = request.ExperienceYears
-            };
-
-            repository.Update(entity);
-            logger.LogInformation("Обновлена запись ветеринара {Id}", id);
+            throw new EntityNotFoundException("Запись ветеринара не найдена.");
         }
+
+        logger.LogInformation("Обновлена запись ветеринара {Id}", id);
     }
 
     /// <inheritdoc />
-    public void Delete(int id)
+    public async Task DeleteAsync(int id, CancellationToken cancellationToken)
     {
-        lock (synchronization.SyncRoot)
+        if (await repository.DeleteAsync(id, cancellationToken))
         {
-            if (repository.GetById(id) is null)
-            {
-                return;
-            }
-
-            if (appointments.GetByVeterinarian(id).Count > 0)
-            {
-                throw new EntityInUseException("Запись ветеринара используется другими записями.");
-            }
-
-            repository.Delete(id);
             logger.LogInformation("Удалена запись ветеринара {Id}", id);
         }
     }
 
     /// <inheritdoc />
-    public IReadOnlyList<AppointmentDto> GetAppointments(int id)
+    public async Task<IReadOnlyList<AppointmentDto>> GetAppointmentsAsync(
+        int id,
+        CancellationToken cancellationToken)
     {
-        lock (synchronization.SyncRoot)
-        {
-            _ = Find(id);
-            return [.. appointments.GetByVeterinarian(id).Select(ClinicMapping.ToDto)];
-        }
+        _ = await FindAsync(id, cancellationToken);
+        var records = await appointments.GetByVeterinarianAsync(id, cancellationToken);
+        return [.. records.Select(ClinicMapping.ToDto)];
     }
 
     /// <inheritdoc />
-    public SpecializationDto GetSpecialization(int id)
+    public async Task<SpecializationDto> GetSpecializationAsync(int id, CancellationToken cancellationToken)
     {
-        lock (synchronization.SyncRoot)
+        var veterinarian = await FindAsync(id, cancellationToken);
+        return ClinicMapping.ToDto(veterinarian.Specialization);
+    }
+
+    /// <summary>
+    /// Проверяет данные ветеринара и связывает запись с существующими сущностями.
+    /// </summary>
+    /// <param name="id">Идентификатор записи или ноль для новой записи.</param>
+    /// <param name="request">Данные ветеринара из запроса.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
+    /// <returns>Проверенная запись для сохранения.</returns>
+    private async Task<Veterinarian> BuildVeterinarianAsync(
+        int id,
+        VeterinarianRequest request,
+        CancellationToken cancellationToken)
+    {
+        var specialization = await specializations.GetByIdAsync(request.SpecializationId, cancellationToken)
+            ?? throw new EntityNotFoundException("Связанная запись специализации не найдена.");
+        if (request.BirthYear > DateTime.Today.Year
+            || request.ExperienceYears > DateTime.Today.Year - request.BirthYear)
         {
-            return ClinicMapping.ToDto(Find(id).Specialization);
+            throw new ValidationException("Год рождения или стаж ветеринара указан неверно.");
         }
+
+        return new()
+        {
+            Id = id,
+            PassportNumber = request.PassportNumber,
+            FullName = request.FullName,
+            BirthYear = request.BirthYear,
+            Specialization = specialization,
+            ExperienceYears = request.ExperienceYears
+        };
     }
 
     /// <summary>
     /// Возвращает существующую запись или сообщает об отсутствии записи.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Найденная запись.</returns>
-    private Veterinarian Find(int id)
+    private async Task<Veterinarian> FindAsync(int id, CancellationToken cancellationToken)
     {
-        return repository.GetById(id)
+        return await repository.GetByIdAsync(id, cancellationToken)
             ?? throw new EntityNotFoundException("Запись ветеринара не найдена.");
     }
 }

@@ -16,34 +16,44 @@ public interface IAnalyticsService
     /// Возвращает врачей, специализирующихся на выбранном виде животных.
     /// </summary>
     /// <param name="species">Вид животных.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Подходящие врачи.</returns>
-    public IReadOnlyList<VeterinarianDto> GetVeterinarians(AnimalSpecies species);
+    public Task<IReadOnlyList<VeterinarianDto>> GetVeterinariansAsync(
+        AnimalSpecies species,
+        CancellationToken cancellationToken);
 
     /// <summary>
     /// Возвращает питомцев выбранного врача без повторов, по кличке.
     /// </summary>
     /// <param name="veterinarianId">Идентификатор врача.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Питомцы врача.</returns>
-    public IReadOnlyList<PetDto> GetPets(int veterinarianId);
+    public Task<IReadOnlyList<PetDto>> GetPetsAsync(int veterinarianId, CancellationToken cancellationToken);
 
     /// <summary>
     /// Считает повторные приёмы питомцев выбранной породы.
     /// </summary>
     /// <param name="breedId">Идентификатор породы.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Количество повторных приёмов.</returns>
-    public FollowUpCountDto GetFollowUpCount(int breedId);
+    public Task<FollowUpCountDto> GetFollowUpCountAsync(int breedId, CancellationToken cancellationToken);
 
     /// <summary>
     /// Возвращает владельцев нескольких питомцев, по ФИО.
     /// </summary>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Владельцы более одного питомца.</returns>
-    public IReadOnlyList<OwnerDto> GetOwnersWithMultiplePets();
+    public Task<IReadOnlyList<OwnerDto>> GetOwnersWithMultiplePetsAsync(CancellationToken cancellationToken);
 
     /// <summary>
     /// Возвращает приёмы кабинета за месяц от выбранной даты, по времени.
     /// </summary>
     /// <param name="asOfDate">Начальная дата, включаемая в выборку.</param>
     /// <param name="roomNumber">Номер кабинета.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Приёмы до той же даты следующего месяца, не включая её.</returns>
-    public IReadOnlyList<AppointmentDto> GetAppointments(DateOnly asOfDate, string roomNumber);
+    public Task<IReadOnlyList<AppointmentDto>> GetAppointmentsAsync(
+        DateOnly asOfDate,
+        string roomNumber,
+        CancellationToken cancellationToken);
 }

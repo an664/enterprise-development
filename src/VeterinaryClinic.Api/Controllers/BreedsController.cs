@@ -19,39 +19,46 @@ public class BreedsController(IBreedService service) : ControllerBase
     /// <summary>
     /// Возвращает список пород.
     /// </summary>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Список пород.</returns>
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<BreedDto>), StatusCodes.Status200OK)]
-    public ActionResult<IReadOnlyList<BreedDto>> GetAll()
+    public async Task<ActionResult<IReadOnlyList<BreedDto>>> GetAll(CancellationToken cancellationToken)
     {
-        return Ok(service.GetAll());
+        return Ok(await service.GetAllAsync(cancellationToken));
     }
 
     /// <summary>
     /// Возвращает данные породы по идентификатору.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
     [HttpGet("{id:int}")]
     [ProducesResponseType(typeof(BreedDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public ActionResult<BreedDto> GetById([Range(1, int.MaxValue)] int id)
+    public async Task<ActionResult<BreedDto>> GetById(
+        [Range(1, int.MaxValue)] int id,
+        CancellationToken cancellationToken)
     {
-        return Ok(service.GetById(id));
+        return Ok(await service.GetByIdAsync(id, cancellationToken));
     }
 
     /// <summary>
     /// Создаёт запись породы.
     /// </summary>
     /// <param name="request">Данные новой записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Созданная запись и ссылка на неё.</returns>
     [HttpPost]
     [ProducesResponseType(typeof(BreedDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    public ActionResult<BreedDto> Create([FromBody] BreedRequest request)
+    public async Task<ActionResult<BreedDto>> Create(
+        [FromBody] BreedRequest request,
+        CancellationToken cancellationToken)
     {
-        var created = service.Create(request);
+        var created = await service.CreateAsync(request, cancellationToken);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
@@ -60,14 +67,18 @@ public class BreedsController(IBreedService service) : ControllerBase
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
     /// <param name="request">Полный набор новых данных.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Подтверждение изменения без тела ответа.</returns>
     [HttpPut("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public ActionResult Update([Range(1, int.MaxValue)] int id, [FromBody] BreedRequest request)
+    public async Task<ActionResult> Update(
+        [Range(1, int.MaxValue)] int id,
+        [FromBody] BreedRequest request,
+        CancellationToken cancellationToken)
     {
-        service.Update(id, request);
+        await service.UpdateAsync(id, request, cancellationToken);
         return NoContent();
     }
 
@@ -75,14 +86,15 @@ public class BreedsController(IBreedService service) : ControllerBase
     /// Удаляет запись породы, если она существует.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Подтверждение удаления без тела ответа.</returns>
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    public ActionResult Delete([Range(1, int.MaxValue)] int id)
+    public async Task<ActionResult> Delete([Range(1, int.MaxValue)] int id, CancellationToken cancellationToken)
     {
-        service.Delete(id);
+        await service.DeleteAsync(id, cancellationToken);
         return NoContent();
     }
 
@@ -90,27 +102,32 @@ public class BreedsController(IBreedService service) : ControllerBase
     /// Возвращает питомцев выбранной породы.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
     [HttpGet("{id:int}/pets")]
     [ProducesResponseType(typeof(IReadOnlyList<PetDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public ActionResult<IReadOnlyList<PetDto>> GetPets([Range(1, int.MaxValue)] int id)
+    public async Task<ActionResult<IReadOnlyList<PetDto>>> GetPets(
+        [Range(1, int.MaxValue)] int id,
+        CancellationToken cancellationToken)
     {
-        return Ok(service.GetPets(id));
+        return Ok(await service.GetPetsAsync(id, cancellationToken));
     }
 
     /// <summary>
     /// Возвращает породы выбранного вида животных.
     /// </summary>
     /// <param name="species">Вид животного.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Породы выбранного вида.</returns>
     [HttpGet("by-species/{species}")]
     [ProducesResponseType(typeof(IReadOnlyList<BreedDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    public ActionResult<IReadOnlyList<BreedDto>> GetBySpecies(
-        [EnumDataType(typeof(AnimalSpecies))] AnimalSpecies species)
+    public async Task<ActionResult<IReadOnlyList<BreedDto>>> GetBySpecies(
+        [EnumDataType(typeof(AnimalSpecies))] AnimalSpecies species,
+        CancellationToken cancellationToken)
     {
-        return Ok(service.GetBySpecies(species));
+        return Ok(await service.GetBySpeciesAsync(species, cancellationToken));
     }
 }

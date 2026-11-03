@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using VeterinaryClinic.Contracts.Validation;
 
 namespace VeterinaryClinic.Contracts.Pets;
 
@@ -10,7 +11,7 @@ public class PetRequest
     /// <summary>
     /// Кличка питомца.
     /// </summary>
-    [Required, StringLength(100)]
+    [Required, StringLength(100), NoNullCharacters]
     public required string Name { get; init; }
 
     /// <summary>

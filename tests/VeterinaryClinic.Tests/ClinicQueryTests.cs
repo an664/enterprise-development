@@ -1,5 +1,5 @@
 using VeterinaryClinic.Shared;
-using VeterinaryClinic.Models;
+using VeterinaryClinic.Domain.Models;
 
 namespace VeterinaryClinic.Tests;
 

@@ -11,40 +11,46 @@ public interface ISpecializationService
     /// <summary>
     /// Возвращает все записи.
     /// </summary>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
-    public IReadOnlyList<SpecializationDto> GetAll();
+    public Task<IReadOnlyList<SpecializationDto>> GetAllAsync(CancellationToken cancellationToken);
 
     /// <summary>
     /// Возвращает запись по идентификатору.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
-    public SpecializationDto GetById(int id);
+    public Task<SpecializationDto> GetByIdAsync(int id, CancellationToken cancellationToken);
 
     /// <summary>
     /// Создаёт запись.
     /// </summary>
     /// <param name="request">Новые данные записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
-    public SpecializationDto Create(SpecializationRequest request);
+    public Task<SpecializationDto> CreateAsync(SpecializationRequest request, CancellationToken cancellationToken);
 
     /// <summary>
     /// Изменяет запись целиком.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
     /// <param name="request">Новые данные записи.</param>
-    public void Update(int id, SpecializationRequest request);
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
+    public Task UpdateAsync(int id, SpecializationRequest request, CancellationToken cancellationToken);
 
     /// <summary>
     /// Удаляет запись, если нет зависимых объектов.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
-    public void Delete(int id);
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
+    public Task DeleteAsync(int id, CancellationToken cancellationToken);
 
     /// <summary>
     /// Врачи выбранной специализации.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
-    public IReadOnlyList<VeterinarianDto> GetVeterinarians(int id);
+    public Task<IReadOnlyList<VeterinarianDto>> GetVeterinariansAsync(int id, CancellationToken cancellationToken);
 }

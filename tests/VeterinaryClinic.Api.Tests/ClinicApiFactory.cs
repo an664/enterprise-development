@@ -3,6 +3,8 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace VeterinaryClinic.Api.Tests;
@@ -12,6 +14,14 @@ namespace VeterinaryClinic.Api.Tests;
 /// </summary>
 public class ClinicApiFactory : WebApplicationFactory<Program>
 {
+    /// <inheritdoc />
+    protected override IHost CreateHost(IHostBuilder builder)
+    {
+        builder.ConfigureHostConfiguration(config => config.AddInMemoryCollection(
+            new Dictionary<string, string?> { ["Storage:Provider"] = "InMemory" }));
+        return base.CreateHost(builder);
+    }
+
     /// <inheritdoc />
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {

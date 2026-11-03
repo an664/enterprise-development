@@ -4,9 +4,9 @@ using VeterinaryClinic.Contracts.Appointments;
 using VeterinaryClinic.Contracts.Breeds;
 using VeterinaryClinic.Contracts.Owners;
 using VeterinaryClinic.Contracts.Pets;
-using VeterinaryClinic.Data;
-using VeterinaryClinic.Models;
-using VeterinaryClinic.Repositories;
+using VeterinaryClinic.Domain.Exceptions;
+using VeterinaryClinic.Domain.Models;
+using VeterinaryClinic.Domain.Repositories;
 
 namespace VeterinaryClinic.Application.Services;
 
@@ -17,160 +17,132 @@ namespace VeterinaryClinic.Application.Services;
 /// <param name="breeds">Репозиторий пород.</param>
 /// <param name="owners">Репозиторий владельцев.</param>
 /// <param name="appointments">Репозиторий приёмов.</param>
-/// <param name="synchronization">Общая блокировка связанных данных.</param>
 /// <param name="logger">Журнал операций.</param>
 public class PetService(
     IPetRepository repository,
     IBreedRepository breeds,
     IOwnerRepository owners,
     IAppointmentRepository appointments,
-    ClinicLock synchronization,
     ILogger<PetService> logger) : IPetService
 {
     /// <inheritdoc />
-    public IReadOnlyList<PetDto> GetAll()
+    public async Task<IReadOnlyList<PetDto>> GetAllAsync(CancellationToken cancellationToken)
     {
-        lock (synchronization.SyncRoot)
-        {
-            logger.LogDebug("Чтение списка питомцев");
-            return [.. repository.GetAll().Select(ClinicMapping.ToDto)];
-        }
+        logger.LogDebug("Чтение списка питомцев");
+        var records = await repository.GetAllAsync(cancellationToken);
+        return [.. records.Select(ClinicMapping.ToDto)];
     }
 
     /// <inheritdoc />
-    public PetDto GetById(int id)
+    public async Task<PetDto> GetByIdAsync(int id, CancellationToken cancellationToken)
     {
-        lock (synchronization.SyncRoot)
-        {
-            logger.LogDebug("Чтение питомца {Id}", id);
-            return ClinicMapping.ToDto(Find(id));
-        }
+        logger.LogDebug("Чтение питомца {Id}", id);
+        return ClinicMapping.ToDto(await FindAsync(id, cancellationToken));
     }
 
     /// <inheritdoc />
-    public PetDto Create(PetRequest request)
+    public async Task<PetDto> CreateAsync(PetRequest request, CancellationToken cancellationToken)
     {
-        lock (synchronization.SyncRoot)
-        {
-            var breed = breeds.GetById(request.BreedId)
-                ?? throw new EntityNotFoundException("Связанная запись породы не найдена.");
-            var owner = owners.GetById(request.OwnerId)
-                ?? throw new EntityNotFoundException("Связанная запись владельца не найдена.");
-            if (request.BirthDate == default || request.BirthDate > DateOnly.FromDateTime(DateTime.Today))
-            {
-                throw new ValidationException(
-                    "Дата рождения питомца должна быть указана и не может быть в будущем.");
-            }
-
-            var entity = new Pet
-            {
-                Id = 0,
-                Name = request.Name,
-                Breed = breed,
-                Owner = owner,
-                BirthDate = request.BirthDate,
-                Weight = request.Weight
-            };
-
-            var created = repository.Add(entity);
-            logger.LogInformation("Создана запись питомца {Id}", created.Id);
-            return ClinicMapping.ToDto(created);
-        }
+        var entity = await BuildPetAsync(0, request, cancellationToken);
+        var created = await repository.AddAsync(entity, cancellationToken);
+        logger.LogInformation("Создана запись питомца {Id}", created.Id);
+        return ClinicMapping.ToDto(created);
     }
 
     /// <inheritdoc />
-    public void Update(int id, PetRequest request)
+    public async Task UpdateAsync(int id, PetRequest request, CancellationToken cancellationToken)
     {
-        lock (synchronization.SyncRoot)
+        var current = await FindAsync(id, cancellationToken);
+        var entity = await BuildPetAsync(id, request, cancellationToken);
+        if (entity.BirthDate > current.BirthDate
+            && await appointments.HasAppointmentBeforeAsync(id, entity.BirthDate, cancellationToken))
         {
-            _ = Find(id);
-            var breed = breeds.GetById(request.BreedId)
-                ?? throw new EntityNotFoundException("Связанная запись породы не найдена.");
-            var owner = owners.GetById(request.OwnerId)
-                ?? throw new EntityNotFoundException("Связанная запись владельца не найдена.");
-            if (request.BirthDate == default || request.BirthDate > DateOnly.FromDateTime(DateTime.Today))
-            {
-                throw new ValidationException(
-                    "Дата рождения питомца должна быть указана и не может быть в будущем.");
-            }
-
-            if (appointments.GetByPet(id)
-                .Any(appointment => DateOnly.FromDateTime(appointment.StartsAt) < request.BirthDate))
-            {
-                throw new ValidationException("Дата рождения не может быть позже существующего приёма питомца.");
-            }
-
-            var entity = new Pet
-            {
-                Id = id,
-                Name = request.Name,
-                Breed = breed,
-                Owner = owner,
-                BirthDate = request.BirthDate,
-                Weight = request.Weight
-            };
-
-            repository.Update(entity);
-            logger.LogInformation("Обновлена запись питомца {Id}", id);
+            throw new ValidationException("Дата рождения не может быть позже существующего приёма питомца.");
         }
+
+        if (!await repository.UpdateAsync(entity, cancellationToken))
+        {
+            throw new EntityNotFoundException("Запись питомца не найдена.");
+        }
+
+        logger.LogInformation("Обновлена запись питомца {Id}", id);
     }
 
     /// <inheritdoc />
-    public void Delete(int id)
+    public async Task DeleteAsync(int id, CancellationToken cancellationToken)
     {
-        lock (synchronization.SyncRoot)
+        if (await repository.DeleteAsync(id, cancellationToken))
         {
-            if (repository.GetById(id) is null)
-            {
-                return;
-            }
-
-            if (appointments.GetByPet(id).Count > 0)
-            {
-                throw new EntityInUseException("Запись питомца используется другими записями.");
-            }
-
-            repository.Delete(id);
             logger.LogInformation("Удалена запись питомца {Id}", id);
         }
     }
 
     /// <inheritdoc />
-    public IReadOnlyList<AppointmentDto> GetAppointments(int id)
+    public async Task<IReadOnlyList<AppointmentDto>> GetAppointmentsAsync(
+        int id,
+        CancellationToken cancellationToken)
     {
-        lock (synchronization.SyncRoot)
-        {
-            _ = Find(id);
-            return [.. appointments.GetByPet(id).Select(ClinicMapping.ToDto)];
-        }
+        _ = await FindAsync(id, cancellationToken);
+        var records = await appointments.GetByPetAsync(id, cancellationToken);
+        return [.. records.Select(ClinicMapping.ToDto)];
     }
 
     /// <inheritdoc />
-    public OwnerDto GetOwner(int id)
+    public async Task<OwnerDto> GetOwnerAsync(int id, CancellationToken cancellationToken)
     {
-        lock (synchronization.SyncRoot)
-        {
-            return ClinicMapping.ToDto(Find(id).Owner);
-        }
+        var pet = await FindAsync(id, cancellationToken);
+        return ClinicMapping.ToDto(pet.Owner);
     }
 
     /// <inheritdoc />
-    public BreedDto GetBreed(int id)
+    public async Task<BreedDto> GetBreedAsync(int id, CancellationToken cancellationToken)
     {
-        lock (synchronization.SyncRoot)
+        var pet = await FindAsync(id, cancellationToken);
+        return ClinicMapping.ToDto(pet.Breed);
+    }
+
+    /// <summary>
+    /// Проверяет данные питомца и связывает запись с существующими сущностями.
+    /// </summary>
+    /// <param name="id">Идентификатор записи или ноль для новой записи.</param>
+    /// <param name="request">Данные питомца из запроса.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
+    /// <returns>Проверенная запись для сохранения.</returns>
+    private async Task<Pet> BuildPetAsync(
+        int id,
+        PetRequest request,
+        CancellationToken cancellationToken)
+    {
+        var breed = await breeds.GetByIdAsync(request.BreedId, cancellationToken)
+            ?? throw new EntityNotFoundException("Связанная запись породы не найдена.");
+        var owner = await owners.GetByIdAsync(request.OwnerId, cancellationToken)
+            ?? throw new EntityNotFoundException("Связанная запись владельца не найдена.");
+        if (request.BirthDate == default || request.BirthDate > DateOnly.FromDateTime(DateTime.Today))
         {
-            return ClinicMapping.ToDto(Find(id).Breed);
+            throw new ValidationException(
+                "Дата рождения питомца должна быть указана и не может быть в будущем.");
         }
+
+        return new()
+        {
+            Id = id,
+            Name = request.Name,
+            Breed = breed,
+            Owner = owner,
+            BirthDate = request.BirthDate,
+            Weight = request.Weight
+        };
     }
 
     /// <summary>
     /// Возвращает существующую запись или сообщает об отсутствии записи.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Найденная запись.</returns>
-    private Pet Find(int id)
+    private async Task<Pet> FindAsync(int id, CancellationToken cancellationToken)
     {
-        return repository.GetById(id)
+        return await repository.GetByIdAsync(id, cancellationToken)
             ?? throw new EntityNotFoundException("Запись питомца не найдена.");
     }
 }

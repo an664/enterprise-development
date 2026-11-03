@@ -267,7 +267,7 @@ public class QueryTests
                 {
                     "petId": 1,
                     "veterinarianId": 1,
-                    "startsAt": "2026-10-15T00:00:00",
+                    "startsAt": "2026-10-15T00:30:00",
                     "roomNumber": "101А",
                     "isFollowUp": false
                 }

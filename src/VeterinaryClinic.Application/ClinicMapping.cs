@@ -4,7 +4,7 @@ using VeterinaryClinic.Contracts.Owners;
 using VeterinaryClinic.Contracts.Pets;
 using VeterinaryClinic.Contracts.Specializations;
 using VeterinaryClinic.Contracts.Veterinarians;
-using VeterinaryClinic.Models;
+using VeterinaryClinic.Domain.Models;
 
 namespace VeterinaryClinic.Application;
 

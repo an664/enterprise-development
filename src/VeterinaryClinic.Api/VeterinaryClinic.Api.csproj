@@ -4,7 +4,9 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../VeterinaryClinic.Application/VeterinaryClinic.Application.csproj" />
-    <ProjectReference Include="../VeterinaryClinic.Infrastructure/VeterinaryClinic.Infrastructure.csproj" />
+    <ProjectReference Include="../VeterinaryClinic.Infrastructure.InMemory/VeterinaryClinic.Infrastructure.InMemory.csproj" />
+    <ProjectReference Include="../VeterinaryClinic.Infrastructure.PostgreSQL/VeterinaryClinic.Infrastructure.PostgreSQL.csproj" />
+    <ProjectReference Include="../VeterinaryClinic.ServiceDefaults/VeterinaryClinic.ServiceDefaults.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />

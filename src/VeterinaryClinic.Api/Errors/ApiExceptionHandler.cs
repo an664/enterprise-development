@@ -1,6 +1,9 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Diagnostics;
-using VeterinaryClinic.Application;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using VeterinaryClinic.Domain.Exceptions;
+using VeterinaryClinic.Infrastructure.PostgreSQL;
 
 namespace VeterinaryClinic.Api.Errors;
 
@@ -22,40 +25,48 @@ public class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : IExcepti
         Exception exception,
         CancellationToken cancellationToken)
     {
-        var status = exception switch
+        var cause = exception.GetBaseException();
+        if (cause is PostgresException
+            { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: ClinicDbContext.AppointmentSlotIndex })
         {
-            EntityNotFoundException => StatusCodes.Status404NotFound,
-            EntityInUseException => StatusCodes.Status409Conflict,
-            ValidationException => StatusCodes.Status400BadRequest,
-            _ => StatusCodes.Status500InternalServerError
+            cause = new AppointmentConflictException();
+        }
+
+        var (status, title) = cause switch
+        {
+            ValidationException => (400, "Некорректные данные запроса."),
+            EntityNotFoundException => (404, "Запись не найдена."),
+            AppointmentConflictException => (409, cause.Message),
+            EntityInUseException => (409, "Запись используется другими данными."),
+            PostgresException { SqlState: PostgresErrorCodes.RestrictViolation or PostgresErrorCodes.ForeignKeyViolation }
+                when HttpMethods.IsDelete(httpContext.Request.Method) => (409, "Запись используется другими данными."),
+            PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation } => (404, "Связанная запись не найдена."),
+            DbUpdateConcurrencyException or PostgresException
+            { SqlState: PostgresErrorCodes.SerializationFailure or PostgresErrorCodes.DeadlockDetected } =>
+                (409, "Данные изменились. Повторите запрос."),
+            _ => (500, "Внутренняя ошибка сервера.")
         };
         var trace = new Dictionary<string, object?>
         {
             ["traceId"] = httpContext.TraceIdentifier
         };
         IResult result;
-        if (exception is ValidationException)
+        if (cause is ValidationException)
         {
             result = Results.ValidationProblem(
                 new Dictionary<string, string[]>
                 {
-                    ["request"] = [exception.Message]
+                    ["request"] = [cause.Message]
                 },
-                title: "Некорректные данные запроса.",
+                title: title,
                 extensions: trace);
         }
         else
         {
-            var title = status switch
-            {
-                StatusCodes.Status404NotFound => "Запись не найдена.",
-                StatusCodes.Status409Conflict => "Запись используется другими данными.",
-                _ => "Внутренняя ошибка сервера."
-            };
             result = Results.Problem(
                 statusCode: status,
                 title: title,
-                detail: status == StatusCodes.Status500InternalServerError ? null : exception.Message,
+                detail: cause is EntityNotFoundException or EntityInUseException ? cause.Message : null,
                 extensions: trace);
         }
 

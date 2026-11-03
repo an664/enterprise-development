@@ -12,47 +12,56 @@ public interface IBreedService
     /// <summary>
     /// Возвращает все записи.
     /// </summary>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
-    public IReadOnlyList<BreedDto> GetAll();
+    public Task<IReadOnlyList<BreedDto>> GetAllAsync(CancellationToken cancellationToken);
 
     /// <summary>
     /// Возвращает запись по идентификатору.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
-    public BreedDto GetById(int id);
+    public Task<BreedDto> GetByIdAsync(int id, CancellationToken cancellationToken);
 
     /// <summary>
     /// Создаёт запись.
     /// </summary>
     /// <param name="request">Новые данные записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
-    public BreedDto Create(BreedRequest request);
+    public Task<BreedDto> CreateAsync(BreedRequest request, CancellationToken cancellationToken);
 
     /// <summary>
     /// Изменяет запись целиком.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
     /// <param name="request">Новые данные записи.</param>
-    public void Update(int id, BreedRequest request);
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
+    public Task UpdateAsync(int id, BreedRequest request, CancellationToken cancellationToken);
 
     /// <summary>
     /// Удаляет запись, если нет зависимых объектов.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
-    public void Delete(int id);
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
+    public Task DeleteAsync(int id, CancellationToken cancellationToken);
 
     /// <summary>
     /// Питомцы выбранной породы.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
-    public IReadOnlyList<PetDto> GetPets(int id);
+    public Task<IReadOnlyList<PetDto>> GetPetsAsync(int id, CancellationToken cancellationToken);
 
     /// <summary>
     /// Породы выбранного вида.
     /// </summary>
     /// <param name="species">Выбранный вид животных.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
-    public IReadOnlyList<BreedDto> GetBySpecies(AnimalSpecies species);
+    public Task<IReadOnlyList<BreedDto>> GetBySpeciesAsync(
+        AnimalSpecies species,
+        CancellationToken cancellationToken);
 }

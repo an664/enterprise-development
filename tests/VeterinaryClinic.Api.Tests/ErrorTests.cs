@@ -1,5 +1,7 @@
 using System.Globalization;
 using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -16,12 +18,51 @@ namespace VeterinaryClinic.Api.Tests;
 public class ErrorTests
 {
     /// <summary>
+    /// Отклоняет запись на занятое время, но разрешает менять данные самого приёма.
+    /// </summary>
+    [Fact]
+    public async Task Appointment_RejectsOccupiedRoomWithoutChangingExistingVisit()
+    {
+        using var factory = new ClinicApiFactory();
+        using var client = factory.CreateClient();
+        var token = TestContext.Current.CancellationToken;
+        var original = await GetJson(client, "/api/appointments/2");
+        var occupied = new
+        {
+            PetId = 2,
+            VeterinarianId = 2,
+            RoomNumber = " 101А ",
+            StartsAt = new DateTime(2026, 9, 20, 9, 0, 0)
+        };
+
+        using var create = await client.PostAsJsonAsync("/api/appointments", occupied, token);
+        Assert.Equal(HttpStatusCode.Conflict, create.StatusCode);
+
+        using var move = await client.PutAsJsonAsync("/api/appointments/2", occupied, token);
+        Assert.Equal(HttpStatusCode.Conflict, move.StatusCode);
+        Assert.True(JsonElement.DeepEquals(original, await GetJson(client, "/api/appointments/2")));
+
+        using var edit = await client.PutAsJsonAsync("/api/appointments/1", occupied, token);
+        Assert.Equal(HttpStatusCode.NoContent, edit.StatusCode);
+    }
+
+    /// <summary>
     /// Проверяет отклонение неверных значений и отсутствующих связанных записей.
     /// </summary>
     /// <param name="resource">Имя ресурса API.</param>
     /// <param name="body">Некорректные данные новой записи.</param>
     /// <param name="status">Ожидаемый статус ответа.</param>
     [Theory]
+    [InlineData(
+        "owners",
+        """
+        {
+            "fullName": "Имя\u0000",
+            "address": "Адрес",
+            "phone": "+79990000001"
+        }
+        """,
+        HttpStatusCode.BadRequest)]
     [InlineData(
         "owners",
         """
@@ -177,6 +218,17 @@ public class ErrorTests
         }
         """,
         HttpStatusCode.NotFound)]
+    [InlineData(
+        "appointments",
+        """
+        {
+            "petId": 1,
+            "veterinarianId": 1,
+            "roomNumber": "302",
+            "startsAt": "2027-04-18T10:00:00.1234567"
+        }
+        """,
+        HttpStatusCode.BadRequest)]
     [InlineData(
         "appointments",
         """
@@ -450,37 +502,37 @@ public class ErrorTests
     private class ThrowingOwnerService : IOwnerService
     {
         /// <inheritdoc />
-        public IReadOnlyList<OwnerDto> GetAll()
+        public Task<IReadOnlyList<OwnerDto>> GetAllAsync(CancellationToken cancellationToken)
         {
             throw new InvalidOperationException("sensitive-marker");
         }
 
         /// <inheritdoc />
-        public OwnerDto GetById(int id)
+        public Task<OwnerDto> GetByIdAsync(int id, CancellationToken cancellationToken)
         {
             throw new NotSupportedException();
         }
 
         /// <inheritdoc />
-        public OwnerDto Create(OwnerRequest request)
+        public Task<OwnerDto> CreateAsync(OwnerRequest request, CancellationToken cancellationToken)
         {
             throw new NotSupportedException();
         }
 
         /// <inheritdoc />
-        public void Update(int id, OwnerRequest request)
+        public Task UpdateAsync(int id, OwnerRequest request, CancellationToken cancellationToken)
         {
             throw new NotSupportedException();
         }
 
         /// <inheritdoc />
-        public void Delete(int id)
+        public Task DeleteAsync(int id, CancellationToken cancellationToken)
         {
             throw new NotSupportedException();
         }
 
         /// <inheritdoc />
-        public IReadOnlyList<PetDto> GetPets(int id)
+        public Task<IReadOnlyList<PetDto>> GetPetsAsync(int id, CancellationToken cancellationToken)
         {
             throw new NotSupportedException();
         }

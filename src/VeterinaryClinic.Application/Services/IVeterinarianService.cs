@@ -12,47 +12,54 @@ public interface IVeterinarianService
     /// <summary>
     /// Возвращает все записи.
     /// </summary>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
-    public IReadOnlyList<VeterinarianDto> GetAll();
+    public Task<IReadOnlyList<VeterinarianDto>> GetAllAsync(CancellationToken cancellationToken);
 
     /// <summary>
     /// Возвращает запись по идентификатору.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
-    public VeterinarianDto GetById(int id);
+    public Task<VeterinarianDto> GetByIdAsync(int id, CancellationToken cancellationToken);
 
     /// <summary>
     /// Создаёт запись.
     /// </summary>
     /// <param name="request">Новые данные записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
-    public VeterinarianDto Create(VeterinarianRequest request);
+    public Task<VeterinarianDto> CreateAsync(VeterinarianRequest request, CancellationToken cancellationToken);
 
     /// <summary>
     /// Изменяет запись целиком.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
     /// <param name="request">Новые данные записи.</param>
-    public void Update(int id, VeterinarianRequest request);
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
+    public Task UpdateAsync(int id, VeterinarianRequest request, CancellationToken cancellationToken);
 
     /// <summary>
     /// Удаляет запись, если нет зависимых объектов.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
-    public void Delete(int id);
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
+    public Task DeleteAsync(int id, CancellationToken cancellationToken);
 
     /// <summary>
     /// Приёмы ветеринара.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
-    public IReadOnlyList<AppointmentDto> GetAppointments(int id);
+    public Task<IReadOnlyList<AppointmentDto>> GetAppointmentsAsync(int id, CancellationToken cancellationToken);
 
     /// <summary>
     /// Специализация ветеринара.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
-    public SpecializationDto GetSpecialization(int id);
+    public Task<SpecializationDto> GetSpecializationAsync(int id, CancellationToken cancellationToken);
 }

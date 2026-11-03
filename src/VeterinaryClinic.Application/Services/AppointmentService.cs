@@ -3,9 +3,9 @@ using Microsoft.Extensions.Logging;
 using VeterinaryClinic.Contracts.Appointments;
 using VeterinaryClinic.Contracts.Pets;
 using VeterinaryClinic.Contracts.Veterinarians;
-using VeterinaryClinic.Data;
-using VeterinaryClinic.Models;
-using VeterinaryClinic.Repositories;
+using VeterinaryClinic.Domain.Exceptions;
+using VeterinaryClinic.Domain.Models;
+using VeterinaryClinic.Domain.Repositories;
 
 namespace VeterinaryClinic.Application.Services;
 
@@ -15,146 +15,125 @@ namespace VeterinaryClinic.Application.Services;
 /// <param name="repository">Репозиторий приёмов.</param>
 /// <param name="pets">Репозиторий питомцев.</param>
 /// <param name="veterinarians">Репозиторий ветеринаров.</param>
-/// <param name="synchronization">Общая блокировка связанных данных.</param>
 /// <param name="logger">Журнал операций.</param>
 public class AppointmentService(
     IAppointmentRepository repository,
     IPetRepository pets,
     IVeterinarianRepository veterinarians,
-    ClinicLock synchronization,
     ILogger<AppointmentService> logger) : IAppointmentService
 {
     /// <inheritdoc />
-    public IReadOnlyList<AppointmentDto> GetAll()
+    public async Task<IReadOnlyList<AppointmentDto>> GetAllAsync(CancellationToken cancellationToken)
     {
-        lock (synchronization.SyncRoot)
-        {
-            logger.LogDebug("Чтение списка приёмов");
-            return [.. repository.GetAll().Select(ClinicMapping.ToDto)];
-        }
+        logger.LogDebug("Чтение списка приёмов");
+        var records = await repository.GetAllAsync(cancellationToken);
+        return [.. records.Select(ClinicMapping.ToDto)];
     }
 
     /// <inheritdoc />
-    public AppointmentDto GetById(int id)
+    public async Task<AppointmentDto> GetByIdAsync(int id, CancellationToken cancellationToken)
     {
-        lock (synchronization.SyncRoot)
-        {
-            logger.LogDebug("Чтение приёма {Id}", id);
-            return ClinicMapping.ToDto(Find(id));
-        }
+        logger.LogDebug("Чтение приёма {Id}", id);
+        return ClinicMapping.ToDto(await FindAsync(id, cancellationToken));
     }
 
     /// <inheritdoc />
-    public AppointmentDto Create(AppointmentRequest request)
+    public async Task<AppointmentDto> CreateAsync(AppointmentRequest request, CancellationToken cancellationToken)
     {
-        lock (synchronization.SyncRoot)
-        {
-            var pet = pets.GetById(request.PetId)
-                ?? throw new EntityNotFoundException("Связанная запись питомца не найдена.");
-            var veterinarian = veterinarians.GetById(request.VeterinarianId)
-                ?? throw new EntityNotFoundException("Связанная запись ветеринара не найдена.");
-            if (request.StartsAt == default || request.StartsAt.Kind != DateTimeKind.Unspecified)
-            {
-                throw new ValidationException("Укажите местные дату и время приёма без смещения часового пояса.");
-            }
-
-            if (DateOnly.FromDateTime(request.StartsAt) < pet.BirthDate)
-            {
-                throw new ValidationException("Приём не может быть раньше рождения питомца.");
-            }
-
-            var entity = new Appointment
-            {
-                Id = 0,
-                Pet = pet,
-                Veterinarian = veterinarian,
-                StartsAt = request.StartsAt,
-                RoomNumber = request.RoomNumber,
-                IsFollowUp = request.IsFollowUp
-            };
-
-            var created = repository.Add(entity);
-            logger.LogInformation("Создана запись приёма {Id}", created.Id);
-            return ClinicMapping.ToDto(created);
-        }
+        var entity = await BuildAppointmentAsync(0, request, cancellationToken);
+        var created = await repository.AddAsync(entity, cancellationToken);
+        logger.LogInformation("Создана запись приёма {Id}", created.Id);
+        return ClinicMapping.ToDto(created);
     }
 
     /// <inheritdoc />
-    public void Update(int id, AppointmentRequest request)
+    public async Task UpdateAsync(int id, AppointmentRequest request, CancellationToken cancellationToken)
     {
-        lock (synchronization.SyncRoot)
+        _ = await FindAsync(id, cancellationToken);
+        var entity = await BuildAppointmentAsync(id, request, cancellationToken);
+
+        if (!await repository.UpdateAsync(entity, cancellationToken))
         {
-            _ = Find(id);
-            var pet = pets.GetById(request.PetId)
-                ?? throw new EntityNotFoundException("Связанная запись питомца не найдена.");
-            var veterinarian = veterinarians.GetById(request.VeterinarianId)
-                ?? throw new EntityNotFoundException("Связанная запись ветеринара не найдена.");
-            if (request.StartsAt == default || request.StartsAt.Kind != DateTimeKind.Unspecified)
-            {
-                throw new ValidationException("Укажите местные дату и время приёма без смещения часового пояса.");
-            }
-
-            if (DateOnly.FromDateTime(request.StartsAt) < pet.BirthDate)
-            {
-                throw new ValidationException("Приём не может быть раньше рождения питомца.");
-            }
-
-            var entity = new Appointment
-            {
-                Id = id,
-                Pet = pet,
-                Veterinarian = veterinarian,
-                StartsAt = request.StartsAt,
-                RoomNumber = request.RoomNumber,
-                IsFollowUp = request.IsFollowUp
-            };
-
-            repository.Update(entity);
-            logger.LogInformation("Обновлена запись приёма {Id}", id);
+            throw new EntityNotFoundException("Запись приёма не найдена.");
         }
+
+        logger.LogInformation("Обновлена запись приёма {Id}", id);
     }
 
     /// <inheritdoc />
-    public void Delete(int id)
+    public async Task DeleteAsync(int id, CancellationToken cancellationToken)
     {
-        lock (synchronization.SyncRoot)
+        if (await repository.DeleteAsync(id, cancellationToken))
         {
-            if (repository.GetById(id) is null)
-            {
-                return;
-            }
-
-            repository.Delete(id);
             logger.LogInformation("Удалена запись приёма {Id}", id);
         }
     }
 
     /// <inheritdoc />
-    public PetDto GetPet(int id)
+    public async Task<PetDto> GetPetAsync(int id, CancellationToken cancellationToken)
     {
-        lock (synchronization.SyncRoot)
-        {
-            return ClinicMapping.ToDto(Find(id).Pet);
-        }
+        var appointment = await FindAsync(id, cancellationToken);
+        return ClinicMapping.ToDto(appointment.Pet);
     }
 
     /// <inheritdoc />
-    public VeterinarianDto GetVeterinarian(int id)
+    public async Task<VeterinarianDto> GetVeterinarianAsync(int id, CancellationToken cancellationToken)
     {
-        lock (synchronization.SyncRoot)
+        var appointment = await FindAsync(id, cancellationToken);
+        return ClinicMapping.ToDto(appointment.Veterinarian);
+    }
+
+    /// <summary>
+    /// Проверяет данные приёма и связывает запись с существующими сущностями.
+    /// </summary>
+    /// <param name="id">Идентификатор записи или ноль для новой записи.</param>
+    /// <param name="request">Данные приёма из запроса.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
+    /// <returns>Проверенная запись для сохранения.</returns>
+    private async Task<Appointment> BuildAppointmentAsync(
+        int id,
+        AppointmentRequest request,
+        CancellationToken cancellationToken)
+    {
+        var pet = await pets.GetByIdAsync(request.PetId, cancellationToken)
+            ?? throw new EntityNotFoundException("Связанная запись питомца не найдена.");
+        var veterinarian = await veterinarians.GetByIdAsync(request.VeterinarianId, cancellationToken)
+            ?? throw new EntityNotFoundException("Связанная запись ветеринара не найдена.");
+        if (request.StartsAt == default || request.StartsAt.Kind != DateTimeKind.Unspecified)
         {
-            return ClinicMapping.ToDto(Find(id).Veterinarian);
+            throw new ValidationException("Укажите местные дату и время приёма без смещения часового пояса.");
         }
+
+        if (request.StartsAt.Ticks % TimeSpan.TicksPerMicrosecond != 0)
+        {
+            throw new ValidationException("Допустимая точность времени приёма - до микросекунд.");
+        }
+
+        if (DateOnly.FromDateTime(request.StartsAt) < pet.BirthDate)
+        {
+            throw new ValidationException("Приём не может быть раньше рождения питомца.");
+        }
+
+        return new()
+        {
+            Id = id,
+            Pet = pet,
+            Veterinarian = veterinarian,
+            StartsAt = request.StartsAt,
+            RoomNumber = request.RoomNumber.Trim(),
+            IsFollowUp = request.IsFollowUp
+        };
     }
 
     /// <summary>
     /// Возвращает существующую запись или сообщает об отсутствии записи.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Найденная запись.</returns>
-    private Appointment Find(int id)
+    private async Task<Appointment> FindAsync(int id, CancellationToken cancellationToken)
     {
-        return repository.GetById(id)
+        return await repository.GetByIdAsync(id, cancellationToken)
             ?? throw new EntityNotFoundException("Запись приёма не найдена.");
     }
 }

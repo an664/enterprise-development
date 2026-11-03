@@ -19,40 +19,48 @@ public class AppointmentsController(IAppointmentService service) : ControllerBas
     /// <summary>
     /// Возвращает список приёмов.
     /// </summary>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Список приёмов.</returns>
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<AppointmentDto>), StatusCodes.Status200OK)]
-    public ActionResult<IReadOnlyList<AppointmentDto>> GetAll()
+    public async Task<ActionResult<IReadOnlyList<AppointmentDto>>> GetAll(CancellationToken cancellationToken)
     {
-        return Ok(service.GetAll());
+        return Ok(await service.GetAllAsync(cancellationToken));
     }
 
     /// <summary>
     /// Возвращает данные приёма по идентификатору.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
     [HttpGet("{id:int}")]
     [ProducesResponseType(typeof(AppointmentDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public ActionResult<AppointmentDto> GetById([Range(1, int.MaxValue)] int id)
+    public async Task<ActionResult<AppointmentDto>> GetById(
+        [Range(1, int.MaxValue)] int id,
+        CancellationToken cancellationToken)
     {
-        return Ok(service.GetById(id));
+        return Ok(await service.GetByIdAsync(id, cancellationToken));
     }
 
     /// <summary>
     /// Создаёт запись приёма.
     /// </summary>
     /// <param name="request">Данные новой записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Созданная запись и ссылка на неё.</returns>
     [HttpPost]
     [ProducesResponseType(typeof(AppointmentDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public ActionResult<AppointmentDto> Create([FromBody] AppointmentRequest request)
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<AppointmentDto>> Create(
+        [FromBody] AppointmentRequest request,
+        CancellationToken cancellationToken)
     {
-        var created = service.Create(request);
+        var created = await service.CreateAsync(request, cancellationToken);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
@@ -61,14 +69,19 @@ public class AppointmentsController(IAppointmentService service) : ControllerBas
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
     /// <param name="request">Полный набор новых данных.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Подтверждение изменения без тела ответа.</returns>
     [HttpPut("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public ActionResult Update([Range(1, int.MaxValue)] int id, [FromBody] AppointmentRequest request)
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<ActionResult> Update(
+        [Range(1, int.MaxValue)] int id,
+        [FromBody] AppointmentRequest request,
+        CancellationToken cancellationToken)
     {
-        service.Update(id, request);
+        await service.UpdateAsync(id, request, cancellationToken);
         return NoContent();
     }
 
@@ -76,13 +89,14 @@ public class AppointmentsController(IAppointmentService service) : ControllerBas
     /// Удаляет запись приёма, если она существует.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Подтверждение удаления без тела ответа.</returns>
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    public ActionResult Delete([Range(1, int.MaxValue)] int id)
+    public async Task<ActionResult> Delete([Range(1, int.MaxValue)] int id, CancellationToken cancellationToken)
     {
-        service.Delete(id);
+        await service.DeleteAsync(id, cancellationToken);
         return NoContent();
     }
 
@@ -90,27 +104,33 @@ public class AppointmentsController(IAppointmentService service) : ControllerBas
     /// Возвращает питомца, записанного на приём.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
     [HttpGet("{id:int}/pet")]
     [ProducesResponseType(typeof(PetDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public ActionResult<PetDto> GetPet([Range(1, int.MaxValue)] int id)
+    public async Task<ActionResult<PetDto>> GetPet(
+        [Range(1, int.MaxValue)] int id,
+        CancellationToken cancellationToken)
     {
-        return Ok(service.GetPet(id));
+        return Ok(await service.GetPetAsync(id, cancellationToken));
     }
 
     /// <summary>
     /// Возвращает ветеринара, проводящего приём.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
     [HttpGet("{id:int}/veterinarian")]
     [ProducesResponseType(typeof(VeterinarianDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public ActionResult<VeterinarianDto> GetVeterinarian([Range(1, int.MaxValue)] int id)
+    public async Task<ActionResult<VeterinarianDto>> GetVeterinarian(
+        [Range(1, int.MaxValue)] int id,
+        CancellationToken cancellationToken)
     {
-        return Ok(service.GetVeterinarian(id));
+        return Ok(await service.GetVeterinarianAsync(id, cancellationToken));
     }
 }

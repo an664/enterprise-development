@@ -1,0 +1,13 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.5.4">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AspireUseCliBundle>true</AspireUseCliBundle>
+    <UserSecretsId>veterinary-clinic-08b0051e-9604-4478-8f46-fadfc714338c</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="13.5.4" />
+    <!-- В Aspire 13.5.4 StreamJsonRpc зависит от уязвимой версии MessagePack 2.5.302. -->
+    <PackageReference Include="MessagePack" Version="2.5.303" />
+    <ProjectReference Include="../VeterinaryClinic.Api/VeterinaryClinic.Api.csproj" />
+  </ItemGroup>
+</Project>

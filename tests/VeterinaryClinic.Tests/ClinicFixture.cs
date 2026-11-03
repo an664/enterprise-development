@@ -1,4 +1,4 @@
-using VeterinaryClinic.Data;
+using VeterinaryClinic.Domain.Data;
 
 namespace VeterinaryClinic.Tests;
 

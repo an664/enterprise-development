@@ -20,40 +20,47 @@ public class PetsController(IPetService service) : ControllerBase
     /// <summary>
     /// Возвращает список питомцев.
     /// </summary>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Список питомцев.</returns>
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<PetDto>), StatusCodes.Status200OK)]
-    public ActionResult<IReadOnlyList<PetDto>> GetAll()
+    public async Task<ActionResult<IReadOnlyList<PetDto>>> GetAll(CancellationToken cancellationToken)
     {
-        return Ok(service.GetAll());
+        return Ok(await service.GetAllAsync(cancellationToken));
     }
 
     /// <summary>
     /// Возвращает данные питомца по идентификатору.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
     [HttpGet("{id:int}")]
     [ProducesResponseType(typeof(PetDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public ActionResult<PetDto> GetById([Range(1, int.MaxValue)] int id)
+    public async Task<ActionResult<PetDto>> GetById(
+        [Range(1, int.MaxValue)] int id,
+        CancellationToken cancellationToken)
     {
-        return Ok(service.GetById(id));
+        return Ok(await service.GetByIdAsync(id, cancellationToken));
     }
 
     /// <summary>
     /// Создаёт запись питомца.
     /// </summary>
     /// <param name="request">Данные новой записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Созданная запись и ссылка на неё.</returns>
     [HttpPost]
     [ProducesResponseType(typeof(PetDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public ActionResult<PetDto> Create([FromBody] PetRequest request)
+    public async Task<ActionResult<PetDto>> Create(
+        [FromBody] PetRequest request,
+        CancellationToken cancellationToken)
     {
-        var created = service.Create(request);
+        var created = await service.CreateAsync(request, cancellationToken);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
@@ -62,14 +69,18 @@ public class PetsController(IPetService service) : ControllerBase
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
     /// <param name="request">Полный набор новых данных.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Подтверждение изменения без тела ответа.</returns>
     [HttpPut("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public ActionResult Update([Range(1, int.MaxValue)] int id, [FromBody] PetRequest request)
+    public async Task<ActionResult> Update(
+        [Range(1, int.MaxValue)] int id,
+        [FromBody] PetRequest request,
+        CancellationToken cancellationToken)
     {
-        service.Update(id, request);
+        await service.UpdateAsync(id, request, cancellationToken);
         return NoContent();
     }
 
@@ -77,14 +88,15 @@ public class PetsController(IPetService service) : ControllerBase
     /// Удаляет запись питомца, если она существует.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Подтверждение удаления без тела ответа.</returns>
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    public ActionResult Delete([Range(1, int.MaxValue)] int id)
+    public async Task<ActionResult> Delete([Range(1, int.MaxValue)] int id, CancellationToken cancellationToken)
     {
-        service.Delete(id);
+        await service.DeleteAsync(id, cancellationToken);
         return NoContent();
     }
 
@@ -92,41 +104,50 @@ public class PetsController(IPetService service) : ControllerBase
     /// Возвращает приёмы питомца.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
     [HttpGet("{id:int}/appointments")]
     [ProducesResponseType(typeof(IReadOnlyList<AppointmentDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public ActionResult<IReadOnlyList<AppointmentDto>> GetAppointments([Range(1, int.MaxValue)] int id)
+    public async Task<ActionResult<IReadOnlyList<AppointmentDto>>> GetAppointments(
+        [Range(1, int.MaxValue)] int id,
+        CancellationToken cancellationToken)
     {
-        return Ok(service.GetAppointments(id));
+        return Ok(await service.GetAppointmentsAsync(id, cancellationToken));
     }
 
     /// <summary>
     /// Возвращает владельца питомца.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
     [HttpGet("{id:int}/owner")]
     [ProducesResponseType(typeof(OwnerDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public ActionResult<OwnerDto> GetOwner([Range(1, int.MaxValue)] int id)
+    public async Task<ActionResult<OwnerDto>> GetOwner(
+        [Range(1, int.MaxValue)] int id,
+        CancellationToken cancellationToken)
     {
-        return Ok(service.GetOwner(id));
+        return Ok(await service.GetOwnerAsync(id, cancellationToken));
     }
 
     /// <summary>
     /// Возвращает породу питомца.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
     [HttpGet("{id:int}/breed")]
     [ProducesResponseType(typeof(BreedDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public ActionResult<BreedDto> GetBreed([Range(1, int.MaxValue)] int id)
+    public async Task<ActionResult<BreedDto>> GetBreed(
+        [Range(1, int.MaxValue)] int id,
+        CancellationToken cancellationToken)
     {
-        return Ok(service.GetBreed(id));
+        return Ok(await service.GetBreedAsync(id, cancellationToken));
     }
 }

@@ -115,7 +115,7 @@ public class CrudTests
         {
             "petId": 2,
             "veterinarianId": 2,
-            "startsAt": "2026-09-17T11:00:00",
+            "startsAt": "2026-09-17T11:30:00",
             "roomNumber": "102",
             "isFollowUp": true
         }

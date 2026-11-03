@@ -1,31 +1,41 @@
 using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore;
 using VeterinaryClinic.Api.Errors;
 using VeterinaryClinic.Api.Filters;
-using VeterinaryClinic.Application.Services;
-using VeterinaryClinic.Data;
-using VeterinaryClinic.Infrastructure;
-using VeterinaryClinic.Infrastructure.Repositories;
-using VeterinaryClinic.Repositories;
+using VeterinaryClinic.Application;
+using VeterinaryClinic.Infrastructure.InMemory;
+using VeterinaryClinic.Infrastructure.PostgreSQL;
+using VeterinaryClinic.ServiceDefaults;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddServiceDefaults();
 
-builder.Services.AddSingleton<ClinicLock>();
-builder.Services.AddSingleton<ClinicStore>();
-builder.Services.AddSingleton<IOwnerRepository, OwnerRepository>();
-builder.Services.AddSingleton<IBreedRepository, BreedRepository>();
-builder.Services.AddSingleton<IPetRepository, PetRepository>();
-builder.Services.AddSingleton<ISpecializationRepository, SpecializationRepository>();
-builder.Services.AddSingleton<IVeterinarianRepository, VeterinarianRepository>();
-builder.Services.AddSingleton<IAppointmentRepository, AppointmentRepository>();
-builder.Services.AddScoped<IOwnerService, OwnerService>();
-builder.Services.AddScoped<IBreedService, BreedService>();
-builder.Services.AddScoped<IPetService, PetService>();
-builder.Services.AddScoped<ISpecializationService, SpecializationService>();
-builder.Services.AddScoped<IVeterinarianService, VeterinarianService>();
-builder.Services.AddScoped<IAppointmentService, AppointmentService>();
-builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+var provider = builder.Configuration["Storage:Provider"] ?? "PostgreSQL";
+switch (provider)
+{
+    case "InMemory":
+        builder.Services.AddInMemoryRepositories();
+        break;
+    case "PostgreSQL":
+        var connectionString = builder.Configuration.GetConnectionString("clinic")
+            ?? throw new InvalidOperationException("Для подключения к PostgreSQL запустите VeterinaryClinic.AppHost.");
+        builder.Services.AddPostgreSqlRepositories(connectionString);
+        builder.Services.AddScoped<WriteTransactionFilter>();
+        break;
+    default:
+        throw new InvalidOperationException($"Неизвестное хранилище: {provider}.");
+}
+
+builder.Services.AddClinicServices();
 builder.Services.AddScoped<RequestLoggingFilter>();
-builder.Services.AddControllers(options => options.Filters.AddService<RequestLoggingFilter>(int.MinValue))
+builder.Services.AddControllers(options =>
+    {
+        options.Filters.AddService<RequestLoggingFilter>(int.MinValue);
+        if (provider == "PostgreSQL")
+        {
+            options.Filters.AddService<WriteTransactionFilter>();
+        }
+    })
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
@@ -41,6 +51,13 @@ builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+if (provider == "PostgreSQL")
+{
+    await using var scope = app.Services.CreateAsyncScope();
+    var database = scope.ServiceProvider.GetRequiredService<ClinicDbContext>();
+    await database.Database.MigrateAsync();
+}
+
 app.UseExceptionHandler();
 if (app.Environment.IsDevelopment())
 {
@@ -48,6 +65,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "Veterinary Clinic API v1"));
 }
 app.MapControllers();
+app.MapDefaultEndpoints();
 app.Run();
 
 /// <summary>

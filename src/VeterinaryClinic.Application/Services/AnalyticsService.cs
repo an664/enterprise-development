@@ -5,8 +5,8 @@ using VeterinaryClinic.Contracts.Appointments;
 using VeterinaryClinic.Contracts.Owners;
 using VeterinaryClinic.Contracts.Pets;
 using VeterinaryClinic.Contracts.Veterinarians;
-using VeterinaryClinic.Data;
-using VeterinaryClinic.Repositories;
+using VeterinaryClinic.Domain.Exceptions;
+using VeterinaryClinic.Domain.Repositories;
 using VeterinaryClinic.Shared;
 
 namespace VeterinaryClinic.Application.Services;
@@ -19,7 +19,6 @@ namespace VeterinaryClinic.Application.Services;
 /// <param name="breeds">Репозиторий пород.</param>
 /// <param name="owners">Репозиторий владельцев.</param>
 /// <param name="appointments">Репозиторий приёмов.</param>
-/// <param name="synchronization">Общая блокировка связанных данных.</param>
 /// <param name="logger">Журнал аналитических запросов.</param>
 public class AnalyticsService(
     IVeterinarianRepository veterinarians,
@@ -27,67 +26,63 @@ public class AnalyticsService(
     IBreedRepository breeds,
     IOwnerRepository owners,
     IAppointmentRepository appointments,
-    ClinicLock synchronization,
     ILogger<AnalyticsService> logger) : IAnalyticsService
 {
     /// <inheritdoc />
-    public IReadOnlyList<VeterinarianDto> GetVeterinarians(AnimalSpecies species)
+    public async Task<IReadOnlyList<VeterinarianDto>> GetVeterinariansAsync(
+        AnimalSpecies species,
+        CancellationToken cancellationToken)
     {
-        lock (synchronization.SyncRoot)
-        {
-            logger.LogInformation("Выборка врачей по виду {Species}", species);
-            return [.. veterinarians.GetBySpecies(species).Select(ClinicMapping.ToDto)];
-        }
+        logger.LogInformation("Выборка врачей по виду {Species}", species);
+        var records = await veterinarians.GetBySpeciesAsync(species, cancellationToken);
+        return [.. records.Select(ClinicMapping.ToDto)];
     }
 
     /// <inheritdoc />
-    public IReadOnlyList<PetDto> GetPets(int veterinarianId)
+    public async Task<IReadOnlyList<PetDto>> GetPetsAsync(int veterinarianId, CancellationToken cancellationToken)
     {
-        lock (synchronization.SyncRoot)
-        {
-            _ = veterinarians.GetById(veterinarianId)
-                ?? throw new EntityNotFoundException("Ветеринар не найден.");
-            logger.LogInformation("Выборка питомцев врача {Id}", veterinarianId);
-            return [.. pets.GetByVeterinarian(veterinarianId).Select(ClinicMapping.ToDto)];
-        }
+        _ = await veterinarians.GetByIdAsync(veterinarianId, cancellationToken)
+            ?? throw new EntityNotFoundException("Ветеринар не найден.");
+        logger.LogInformation("Выборка питомцев врача {Id}", veterinarianId);
+        var records = await pets.GetByVeterinarianAsync(veterinarianId, cancellationToken);
+        return [.. records.Select(ClinicMapping.ToDto)];
     }
 
     /// <inheritdoc />
-    public FollowUpCountDto GetFollowUpCount(int breedId)
+    public async Task<FollowUpCountDto> GetFollowUpCountAsync(int breedId, CancellationToken cancellationToken)
     {
-        lock (synchronization.SyncRoot)
-        {
-            _ = breeds.GetById(breedId)
-                ?? throw new EntityNotFoundException("Порода не найдена.");
-            logger.LogInformation("Подсчёт повторных приёмов породы {Id}", breedId);
-            return new(breedId, appointments.CountFollowUpsByBreed(breedId));
-        }
+        _ = await breeds.GetByIdAsync(breedId, cancellationToken)
+            ?? throw new EntityNotFoundException("Порода не найдена.");
+        logger.LogInformation("Подсчёт повторных приёмов породы {Id}", breedId);
+        var count = await appointments.CountFollowUpsByBreedAsync(breedId, cancellationToken);
+        return new(breedId, count);
     }
 
     /// <inheritdoc />
-    public IReadOnlyList<OwnerDto> GetOwnersWithMultiplePets()
+    public async Task<IReadOnlyList<OwnerDto>> GetOwnersWithMultiplePetsAsync(CancellationToken cancellationToken)
     {
-        lock (synchronization.SyncRoot)
-        {
-            logger.LogInformation("Выборка владельцев нескольких питомцев");
-            return [.. owners.GetWithMultiplePets().Select(ClinicMapping.ToDto)];
-        }
+        logger.LogInformation("Выборка владельцев нескольких питомцев");
+        var records = await owners.GetWithMultiplePetsAsync(cancellationToken);
+        return [.. records.Select(ClinicMapping.ToDto)];
     }
 
     /// <inheritdoc />
-    public IReadOnlyList<AppointmentDto> GetAppointments(DateOnly asOfDate, string roomNumber)
+    public async Task<IReadOnlyList<AppointmentDto>> GetAppointmentsAsync(
+        DateOnly asOfDate,
+        string roomNumber,
+        CancellationToken cancellationToken)
     {
         if (asOfDate == default || (asOfDate.Year == 9999 && asOfDate.Month == 12))
         {
             throw new ValidationException("Укажите дату, для которой можно определить конец месячного периода.");
         }
 
+        var room = roomNumber.Trim();
         var from = asOfDate.ToDateTime(TimeOnly.MinValue);
         var to = from.AddMonths(1);
-        lock (synchronization.SyncRoot)
-        {
-            logger.LogInformation("Выборка приёмов за период {From} - {To}", from, to);
-            return [.. appointments.GetForPeriod(from, to, roomNumber).Select(ClinicMapping.ToDto)];
-        }
+
+        logger.LogInformation("Выборка приёмов за период {From} - {To}", from, to);
+        var records = await appointments.GetForPeriodAsync(from, to, room, cancellationToken);
+        return [.. records.Select(ClinicMapping.ToDto)];
     }
 }

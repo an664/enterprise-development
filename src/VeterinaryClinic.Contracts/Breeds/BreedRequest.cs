@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using VeterinaryClinic.Contracts.Validation;
 using VeterinaryClinic.Shared;
 
 namespace VeterinaryClinic.Contracts.Breeds;
@@ -11,7 +12,7 @@ public class BreedRequest
     /// <summary>
     /// Название породы.
     /// </summary>
-    [Required, StringLength(100)]
+    [Required, StringLength(100), NoNullCharacters]
     public required string Name { get; init; }
 
     /// <summary>

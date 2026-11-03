@@ -9,7 +9,7 @@
     <PackageReference Include="xunit.v3" Version="4.0.1" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../../src/VeterinaryClinic/VeterinaryClinic.csproj" />
+    <ProjectReference Include="../../src/VeterinaryClinic.Domain/VeterinaryClinic.Domain.csproj" />
     <Using Include="Xunit" />
   </ItemGroup>
 </Project>

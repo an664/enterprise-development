@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using VeterinaryClinic.Contracts.Validation;
 
 namespace VeterinaryClinic.Contracts.Appointments;
 
@@ -20,14 +21,14 @@ public class AppointmentRequest
     public required int VeterinarianId { get; init; }
 
     /// <summary>
-    /// Местные дата и время приёма, без смещения UTC.
+    /// Местные дата и время приёма без смещения UTC, с точностью до микросекунд.
     /// </summary>
     public required DateTime StartsAt { get; init; }
 
     /// <summary>
     /// Номер кабинета.
     /// </summary>
-    [Required, StringLength(20)]
+    [Required, StringLength(20), NoNullCharacters]
     public required string RoomNumber { get; init; }
 
     /// <summary>

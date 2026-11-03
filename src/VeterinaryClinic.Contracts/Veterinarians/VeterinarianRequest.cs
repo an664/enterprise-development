@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using VeterinaryClinic.Contracts.Validation;
 
 namespace VeterinaryClinic.Contracts.Veterinarians;
 
@@ -10,13 +11,13 @@ public class VeterinarianRequest
     /// <summary>
     /// Номер паспорта.
     /// </summary>
-    [Required, StringLength(30)]
+    [Required, StringLength(30), NoNullCharacters]
     public required string PassportNumber { get; init; }
 
     /// <summary>
     /// Фамилия, имя и отчество.
     /// </summary>
-    [Required, StringLength(200)]
+    [Required, StringLength(200), NoNullCharacters]
     public required string FullName { get; init; }
 
     /// <summary>

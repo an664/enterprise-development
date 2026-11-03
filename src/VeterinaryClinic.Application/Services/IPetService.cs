@@ -13,54 +13,62 @@ public interface IPetService
     /// <summary>
     /// Возвращает все записи.
     /// </summary>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
-    public IReadOnlyList<PetDto> GetAll();
+    public Task<IReadOnlyList<PetDto>> GetAllAsync(CancellationToken cancellationToken);
 
     /// <summary>
     /// Возвращает запись по идентификатору.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
-    public PetDto GetById(int id);
+    public Task<PetDto> GetByIdAsync(int id, CancellationToken cancellationToken);
 
     /// <summary>
     /// Создаёт запись.
     /// </summary>
     /// <param name="request">Новые данные записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
-    public PetDto Create(PetRequest request);
+    public Task<PetDto> CreateAsync(PetRequest request, CancellationToken cancellationToken);
 
     /// <summary>
     /// Изменяет запись целиком.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
     /// <param name="request">Новые данные записи.</param>
-    public void Update(int id, PetRequest request);
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
+    public Task UpdateAsync(int id, PetRequest request, CancellationToken cancellationToken);
 
     /// <summary>
     /// Удаляет запись, если нет зависимых объектов.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
-    public void Delete(int id);
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
+    public Task DeleteAsync(int id, CancellationToken cancellationToken);
 
     /// <summary>
     /// Приёмы питомца.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
-    public IReadOnlyList<AppointmentDto> GetAppointments(int id);
+    public Task<IReadOnlyList<AppointmentDto>> GetAppointmentsAsync(int id, CancellationToken cancellationToken);
 
     /// <summary>
     /// Владелец питомца.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
-    public OwnerDto GetOwner(int id);
+    public Task<OwnerDto> GetOwnerAsync(int id, CancellationToken cancellationToken);
 
     /// <summary>
     /// Порода питомца.
     /// </summary>
     /// <param name="id">Идентификатор записи.</param>
+    /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Результат операции.</returns>
-    public BreedDto GetBreed(int id);
+    public Task<BreedDto> GetBreedAsync(int id, CancellationToken cancellationToken);
 }
