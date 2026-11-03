@@ -11,6 +11,6 @@ public interface IOwnerRepository : IRepository<Owner>
     /// Владельцы нескольких питомцев, отсортированные по ФИО.
     /// </summary>
     /// <param name="cancellationToken">Сигнал отмены запроса.</param>
-    /// <returns>Результат выборки.</returns>
-    public Task<IReadOnlyList<Owner>> GetWithMultiplePetsAsync(CancellationToken cancellationToken);
+    /// <returns>Владельцы с количеством их питомцев.</returns>
+    public Task<IReadOnlyList<OwnerWithPetCount>> GetWithMultiplePetsAsync(CancellationToken cancellationToken);
 }

@@ -2,7 +2,6 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.Extensions.Logging;
 using VeterinaryClinic.Contracts.Analytics;
 using VeterinaryClinic.Contracts.Appointments;
-using VeterinaryClinic.Contracts.Owners;
 using VeterinaryClinic.Contracts.Pets;
 using VeterinaryClinic.Contracts.Veterinarians;
 using VeterinaryClinic.Domain.Exceptions;
@@ -59,7 +58,7 @@ public class AnalyticsService(
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<OwnerDto>> GetOwnersWithMultiplePetsAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<OwnerWithPetCountDto>> GetOwnersWithMultiplePetsAsync(CancellationToken cancellationToken)
     {
         logger.LogInformation("Выборка владельцев нескольких питомцев");
         var records = await owners.GetWithMultiplePetsAsync(cancellationToken);

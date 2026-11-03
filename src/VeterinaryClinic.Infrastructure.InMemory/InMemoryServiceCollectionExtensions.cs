@@ -26,18 +26,19 @@ public static class InMemoryServiceCollectionExtensions
             var pets = data.Pets.ToDictionary(record => record.Id);
             var appointments = data.Appointments.ToDictionary(record => record.Id);
 
+            var locks = new TableLocks();
             services.AddSingleton<IOwnerRepository>(
-                new OwnerRepository(owners, pets));
+                new OwnerRepository(owners, pets, locks));
             services.AddSingleton<IBreedRepository>(
-                new BreedRepository(breeds, pets));
+                new BreedRepository(breeds, pets, locks));
             services.AddSingleton<ISpecializationRepository>(
-                new SpecializationRepository(specializations, veterinarians));
+                new SpecializationRepository(specializations, veterinarians, locks));
             services.AddSingleton<IVeterinarianRepository>(
-                new VeterinarianRepository(specializations, veterinarians, appointments));
+                new VeterinarianRepository(specializations, veterinarians, appointments, locks));
             services.AddSingleton<IPetRepository>(
-                new PetRepository(owners, breeds, pets, appointments));
+                new PetRepository(owners, breeds, pets, appointments, locks));
             services.AddSingleton<IAppointmentRepository>(
-                new AppointmentRepository(owners, breeds, specializations, veterinarians, pets, appointments));
+                new AppointmentRepository(veterinarians, pets, appointments, locks));
             return services;
         }
     }

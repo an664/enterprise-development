@@ -12,14 +12,19 @@ internal class OwnerRepository(ClinicDbContext db)
     : PostgreSqlRepository<Owner>(db, entity => entity.Id), IOwnerRepository
 {
     /// <inheritdoc />
-    public async Task<IReadOnlyList<Owner>> GetWithMultiplePetsAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<OwnerWithPetCount>> GetWithMultiplePetsAsync(CancellationToken cancellationToken)
     {
-        var pets = Database.Set<Pet>();
-        return await Entities.AsNoTracking()
-            .Where(owner => pets.Count(pet => pet.Owner.Id == owner.Id) > 1)
-            .OrderBy(owner => EF.Functions.Collate(owner.FullName, "C"))
-            .ThenBy(owner => owner.Id)
-            .ToListAsync(cancellationToken);
+        var petCounts = Database.Set<Pet>()
+            .GroupBy(pet => pet.Owner.Id)
+            .Where(group => group.Count() > 1)
+            .Select(group => new { OwnerId = group.Key, PetCount = group.Count() });
+
+        var owners = from owner in Entities.AsNoTracking()
+                     join count in petCounts on owner.Id equals count.OwnerId
+                     orderby EF.Functions.Collate(owner.FullName, "C"), owner.Id
+                     select new OwnerWithPetCount(owner, count.PetCount);
+
+        return await owners.ToListAsync(cancellationToken);
     }
 
     /// <inheritdoc />

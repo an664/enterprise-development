@@ -101,6 +101,7 @@ public class QueryTests
         int[] expectedOwnerPets = [1, 2, 13];
         int[] expectedBreedPets = [1, 4];
         int[] expectedOwnersWithMultiplePets = [2, 3];
+        int[] expectedPetCounts = [3, 2];
         int[] expectedVeterinarianPets = [2, 13, 3, 1];
 
         using var ownerUpdate = await client.PutAsync(
@@ -156,6 +157,7 @@ public class QueryTests
         var veterinarianPets = await GetJson(client, "/api/analytics/pets?veterinarianId=1");
         var followUpCount = await GetJson(client, "/api/analytics/follow-up-count?breedId=1");
         Assert.Equal(expectedOwnersWithMultiplePets, Ids(owners));
+        Assert.Equal(expectedPetCounts, owners.EnumerateArray().Select(owner => owner.GetProperty("petCount").GetInt32()));
         Assert.Equal(expectedVeterinarianPets, Ids(veterinarianPets));
         Assert.Equal(1, followUpCount.GetProperty("count").GetInt32());
     }

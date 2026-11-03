@@ -9,9 +9,11 @@ namespace VeterinaryClinic.Infrastructure.InMemory.Repositories;
 /// </summary>
 /// <param name="owners">Записи владельцев.</param>
 /// <param name="pets">Записи питомцев.</param>
+/// <param name="locks">Блокировки коллекций хранилища.</param>
 internal class OwnerRepository(
     Dictionary<int, Owner> owners,
-    Dictionary<int, Pet> pets) : IOwnerRepository
+    Dictionary<int, Pet> pets,
+    TableLocks locks) : IOwnerRepository
 {
     /// <summary>
     /// Следующий свободный идентификатор.
@@ -21,21 +23,21 @@ internal class OwnerRepository(
     /// <inheritdoc />
     public Task<IReadOnlyList<Owner>> GetAllAsync(CancellationToken cancellationToken)
     {
-        return TableLocks.RunAsync<IReadOnlyList<Owner>>([owners], cancellationToken, () =>
+        return TableLocks.RunAsync<IReadOnlyList<Owner>>([locks.Owners], cancellationToken, () =>
             owners.Values.OrderBy(record => record.Id).Select(EntitySnapshot.Copy).ToList());
     }
 
     /// <inheritdoc />
     public Task<Owner?> GetByIdAsync(int id, CancellationToken cancellationToken)
     {
-        return TableLocks.RunAsync<Owner?>([owners], cancellationToken, () =>
+        return TableLocks.RunAsync<Owner?>([locks.Owners], cancellationToken, () =>
             owners.TryGetValue(id, out var record) ? EntitySnapshot.Copy(record) : null);
     }
 
     /// <inheritdoc />
     public Task<Owner> AddAsync(Owner entity, CancellationToken cancellationToken)
     {
-        return TableLocks.RunAsync([owners], cancellationToken, () =>
+        return TableLocks.RunAsync([locks.Owners], cancellationToken, () =>
         {
             var stored = EntitySnapshot.Copy(entity);
             stored.Id = _nextId++;
@@ -47,7 +49,7 @@ internal class OwnerRepository(
     /// <inheritdoc />
     public Task<bool> UpdateAsync(Owner entity, CancellationToken cancellationToken)
     {
-        return TableLocks.RunAsync([owners], cancellationToken, () =>
+        return TableLocks.RunAsync([locks.Owners], cancellationToken, () =>
         {
             if (!owners.TryGetValue(entity.Id, out var current))
             {
@@ -64,7 +66,7 @@ internal class OwnerRepository(
     /// <inheritdoc />
     public Task<bool> DeleteAsync(int id, CancellationToken cancellationToken)
     {
-        return TableLocks.RunAsync([owners, pets], cancellationToken, () =>
+        return TableLocks.RunAsync([locks.Owners, locks.Pets], cancellationToken, () =>
         {
             if (pets.Values.Any(record => record.Owner.Id == id))
             {
@@ -76,16 +78,17 @@ internal class OwnerRepository(
     }
 
     /// <inheritdoc />
-    public Task<IReadOnlyList<Owner>> GetWithMultiplePetsAsync(CancellationToken cancellationToken)
+    public Task<IReadOnlyList<OwnerWithPetCount>> GetWithMultiplePetsAsync(CancellationToken cancellationToken)
     {
-        return TableLocks.RunAsync<IReadOnlyList<Owner>>([owners, pets], cancellationToken, () =>
+        return TableLocks.RunAsync<IReadOnlyList<OwnerWithPetCount>>(
+            [locks.Owners, locks.Pets],
+            cancellationToken, () =>
             pets.Values
                 .GroupBy(pet => pet.Owner.Id)
                 .Where(group => group.Count() > 1)
-                .Select(group => owners[group.Key])
-                .OrderBy(owner => owner.FullName, StringComparer.Ordinal)
-                .ThenBy(owner => owner.Id)
-                .Select(EntitySnapshot.Copy)
+                .Select(group => new OwnerWithPetCount(EntitySnapshot.Copy(owners[group.Key]), group.Count()))
+                .OrderBy(result => result.Owner.FullName, StringComparer.Ordinal)
+                .ThenBy(result => result.Owner.Id)
                 .ToList());
     }
 }

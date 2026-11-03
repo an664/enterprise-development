@@ -10,9 +10,11 @@ namespace VeterinaryClinic.Infrastructure.InMemory.Repositories;
 /// </summary>
 /// <param name="breeds">Записи пород.</param>
 /// <param name="pets">Записи питомцев.</param>
+/// <param name="locks">Блокировки коллекций хранилища.</param>
 internal class BreedRepository(
     Dictionary<int, Breed> breeds,
-    Dictionary<int, Pet> pets) : IBreedRepository
+    Dictionary<int, Pet> pets,
+    TableLocks locks) : IBreedRepository
 {
     /// <summary>
     /// Следующий свободный идентификатор.
@@ -22,21 +24,21 @@ internal class BreedRepository(
     /// <inheritdoc />
     public Task<IReadOnlyList<Breed>> GetAllAsync(CancellationToken cancellationToken)
     {
-        return TableLocks.RunAsync<IReadOnlyList<Breed>>([breeds], cancellationToken, () =>
+        return TableLocks.RunAsync<IReadOnlyList<Breed>>([locks.Breeds], cancellationToken, () =>
             breeds.Values.OrderBy(record => record.Id).Select(EntitySnapshot.Copy).ToList());
     }
 
     /// <inheritdoc />
     public Task<Breed?> GetByIdAsync(int id, CancellationToken cancellationToken)
     {
-        return TableLocks.RunAsync<Breed?>([breeds], cancellationToken, () =>
+        return TableLocks.RunAsync<Breed?>([locks.Breeds], cancellationToken, () =>
             breeds.TryGetValue(id, out var record) ? EntitySnapshot.Copy(record) : null);
     }
 
     /// <inheritdoc />
     public Task<Breed> AddAsync(Breed entity, CancellationToken cancellationToken)
     {
-        return TableLocks.RunAsync([breeds], cancellationToken, () =>
+        return TableLocks.RunAsync([locks.Breeds], cancellationToken, () =>
         {
             var stored = EntitySnapshot.Copy(entity);
             stored.Id = _nextId++;
@@ -48,7 +50,7 @@ internal class BreedRepository(
     /// <inheritdoc />
     public Task<bool> UpdateAsync(Breed entity, CancellationToken cancellationToken)
     {
-        return TableLocks.RunAsync([breeds], cancellationToken, () =>
+        return TableLocks.RunAsync([locks.Breeds], cancellationToken, () =>
         {
             if (!breeds.TryGetValue(entity.Id, out var current))
             {
@@ -64,7 +66,7 @@ internal class BreedRepository(
     /// <inheritdoc />
     public Task<bool> DeleteAsync(int id, CancellationToken cancellationToken)
     {
-        return TableLocks.RunAsync([breeds, pets], cancellationToken, () =>
+        return TableLocks.RunAsync([locks.Breeds, locks.Pets], cancellationToken, () =>
         {
             if (pets.Values.Any(record => record.Breed.Id == id))
             {
@@ -78,7 +80,7 @@ internal class BreedRepository(
     /// <inheritdoc />
     public Task<IReadOnlyList<Breed>> GetBySpeciesAsync(AnimalSpecies species, CancellationToken cancellationToken)
     {
-        return TableLocks.RunAsync<IReadOnlyList<Breed>>([breeds], cancellationToken, () =>
+        return TableLocks.RunAsync<IReadOnlyList<Breed>>([locks.Breeds], cancellationToken, () =>
             breeds.Values
                 .Where(breed => breed.Species == species)
                 .OrderBy(record => record.Id)

@@ -1,8 +1,11 @@
+using System.ComponentModel;
+
 namespace VeterinaryClinic.Shared;
 
 /// <summary>
 /// Биологический вид животного.
 /// </summary>
+[TypeConverter(typeof(AnimalSpeciesConverter))]
 public enum AnimalSpecies
 {
     /// <summary>

@@ -1,3 +1,4 @@
+using VeterinaryClinic.Contracts.Analytics;
 using VeterinaryClinic.Contracts.Appointments;
 using VeterinaryClinic.Contracts.Breeds;
 using VeterinaryClinic.Contracts.Owners;
@@ -21,6 +22,17 @@ internal static class ClinicMapping
     internal static OwnerDto ToDto(Owner entity)
     {
         return new(entity.Id, entity.FullName, entity.Address, entity.Phone);
+    }
+
+    /// <summary>
+    /// Формирует ответ с количеством питомцев у владельца.
+    /// </summary>
+    /// <param name="result">Владелец и количество его питомцев.</param>
+    /// <returns>Сведения о владельце и количестве питомцев.</returns>
+    internal static OwnerWithPetCountDto ToDto(OwnerWithPetCount result)
+    {
+        var owner = result.Owner;
+        return new(owner.Id, owner.FullName, owner.Address, owner.Phone, result.PetCount);
     }
 
     /// <summary>

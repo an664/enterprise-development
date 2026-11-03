@@ -9,9 +9,11 @@ namespace VeterinaryClinic.Infrastructure.InMemory.Repositories;
 /// </summary>
 /// <param name="specializations">Записи специализаций.</param>
 /// <param name="veterinarians">Записи ветеринаров.</param>
+/// <param name="locks">Блокировки коллекций хранилища.</param>
 internal class SpecializationRepository(
     Dictionary<int, Specialization> specializations,
-    Dictionary<int, Veterinarian> veterinarians) : ISpecializationRepository
+    Dictionary<int, Veterinarian> veterinarians,
+    TableLocks locks) : ISpecializationRepository
 {
     /// <summary>
     /// Следующий свободный идентификатор.
@@ -21,21 +23,21 @@ internal class SpecializationRepository(
     /// <inheritdoc />
     public Task<IReadOnlyList<Specialization>> GetAllAsync(CancellationToken cancellationToken)
     {
-        return TableLocks.RunAsync<IReadOnlyList<Specialization>>([specializations], cancellationToken, () =>
+        return TableLocks.RunAsync<IReadOnlyList<Specialization>>([locks.Specializations], cancellationToken, () =>
             specializations.Values.OrderBy(record => record.Id).Select(EntitySnapshot.Copy).ToList());
     }
 
     /// <inheritdoc />
     public Task<Specialization?> GetByIdAsync(int id, CancellationToken cancellationToken)
     {
-        return TableLocks.RunAsync<Specialization?>([specializations], cancellationToken, () =>
+        return TableLocks.RunAsync<Specialization?>([locks.Specializations], cancellationToken, () =>
             specializations.TryGetValue(id, out var record) ? EntitySnapshot.Copy(record) : null);
     }
 
     /// <inheritdoc />
     public Task<Specialization> AddAsync(Specialization entity, CancellationToken cancellationToken)
     {
-        return TableLocks.RunAsync([specializations], cancellationToken, () =>
+        return TableLocks.RunAsync([locks.Specializations], cancellationToken, () =>
         {
             var stored = EntitySnapshot.Copy(entity);
             stored.Id = _nextId++;
@@ -47,7 +49,7 @@ internal class SpecializationRepository(
     /// <inheritdoc />
     public Task<bool> UpdateAsync(Specialization entity, CancellationToken cancellationToken)
     {
-        return TableLocks.RunAsync([specializations], cancellationToken, () =>
+        return TableLocks.RunAsync([locks.Specializations], cancellationToken, () =>
         {
             if (!specializations.TryGetValue(entity.Id, out var current))
             {
@@ -63,7 +65,7 @@ internal class SpecializationRepository(
     /// <inheritdoc />
     public Task<bool> DeleteAsync(int id, CancellationToken cancellationToken)
     {
-        return TableLocks.RunAsync([specializations, veterinarians], cancellationToken, () =>
+        return TableLocks.RunAsync([locks.Specializations, locks.Veterinarians], cancellationToken, () =>
         {
             if (veterinarians.Values.Any(record => record.Specialization.Id == id))
             {

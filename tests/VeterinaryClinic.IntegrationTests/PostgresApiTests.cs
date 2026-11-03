@@ -19,7 +19,6 @@ public class PostgresApiTests(ClinicAppFixture clinic) : IClassFixture<ClinicApp
     [Theory]
     [InlineData("veterinarians?species=Cat", new[] { 1, 2 })]
     [InlineData("pets?veterinarianId=1", new[] { 1, 2, 13, 3 })]
-    [InlineData("owners-with-multiple-pets", new[] { 2, 3, 1 })]
     [InlineData("appointments?asOfDate=2026-09-15&roomNumber=%20101А%20", new[] { 15, 1, 2 })]
     public async Task Analytics_ReturnsSeededRecords(string query, int[] expectedIds)
     {
@@ -28,6 +27,23 @@ public class PostgresApiTests(ClinicAppFixture clinic) : IClassFixture<ClinicApp
 
         Assert.NotNull(records);
         Assert.Equal(expectedIds, records.Select(record => record.GetProperty("id").GetInt32()));
+    }
+
+    /// <summary>
+    /// Проверяет количество питомцев и порядок владельцев по ФИО.
+    /// </summary>
+    [Fact]
+    public async Task OwnersWithMultiplePets_ReturnsPetCountsInNameOrder()
+    {
+        int[] expectedOwnerIds = [2, 3, 1];
+        const int expectedPetCount = 2;
+
+        var owners = await clinic.Client.GetFromJsonAsync<JsonElement[]>(
+            "/api/analytics/owners-with-multiple-pets", TestContext.Current.CancellationToken);
+
+        Assert.NotNull(owners);
+        Assert.Equal(expectedOwnerIds, owners.Select(owner => owner.GetProperty("id").GetInt32()));
+        Assert.All(owners, owner => Assert.Equal(expectedPetCount, owner.GetProperty("petCount").GetInt32()));
     }
 
     /// <summary>
@@ -87,7 +103,7 @@ public class PostgresApiTests(ClinicAppFixture clinic) : IClassFixture<ClinicApp
     }
 
     /// <summary>
-    /// Проверяет, что API не принимает время точнее, чем может сохранить PostgreSQL.
+    /// Проверяет сохранение микросекунд и отклонение дополнительного тика DateTime.
     /// </summary>
     [Fact]
     public async Task AppointmentTime_RoundTripsToMicroseconds()

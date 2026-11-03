@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Mime;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using static VeterinaryClinic.Api.Tests.ClinicApiFactory;
@@ -40,7 +41,9 @@ public class DocumentationTests
         {
             var collection = paths.GetProperty($"/api/{resource}");
             var item = paths.GetProperty($"/api/{resource}/{{id}}");
-            Assert.True(collection.GetProperty("get").GetProperty("responses").TryGetProperty("200", out _));
+            var listContent = collection.GetProperty("get").GetProperty("responses").GetProperty("200").GetProperty("content");
+            Assert.True(listContent.TryGetProperty(MediaTypeNames.Application.Json, out _));
+            Assert.False(listContent.TryGetProperty(MediaTypeNames.Text.Plain, out _));
             var create = collection.GetProperty("post");
             Assert.True(create.GetProperty("responses").TryGetProperty("201", out _));
             Assert.True(create.GetProperty("responses").TryGetProperty("400", out _));
@@ -62,7 +65,24 @@ public class DocumentationTests
                     operation.Value.TryGetProperty("summary", out var summary),
                     $"Нет summary у {operation.Name} {path.Name}");
                 Assert.False(string.IsNullOrWhiteSpace(summary.GetString()));
-                Assert.True(operation.Value.GetProperty("responses").TryGetProperty("500", out _));
+                var responses = operation.Value.GetProperty("responses");
+                Assert.True(responses.TryGetProperty("500", out _));
+                if (operation.Name is "post" or "put" or "delete")
+                {
+                    Assert.True(responses.TryGetProperty("409", out _),
+                        $"Нет ответа 409 у {operation.Name} {path.Name}");
+                }
+
+                var errors = responses.EnumerateObject()
+                    .Where(response => response.Name is "400" or "404" or "409" or "500");
+                foreach (var error in errors)
+                {
+                    var content = Assert.Single(error.Value.GetProperty("content").EnumerateObject());
+                    Assert.Equal(MediaTypeNames.Application.ProblemJson, content.Name);
+                    var expectedType = error.Name == "400" ? "ValidationProblemDetails" : "ProblemDetails";
+                    var reference = content.Value.GetProperty("schema").GetProperty("$ref").GetString();
+                    Assert.Equal($"#/components/schemas/{expectedType}", reference);
+                }
             }
         }
 

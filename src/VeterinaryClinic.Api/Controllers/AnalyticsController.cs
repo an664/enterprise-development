@@ -4,11 +4,11 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using VeterinaryClinic.Application.Services;
 using VeterinaryClinic.Contracts.Analytics;
 using VeterinaryClinic.Contracts.Appointments;
-using VeterinaryClinic.Contracts.Owners;
 using VeterinaryClinic.Contracts.Pets;
 using VeterinaryClinic.Contracts.Validation;
 using VeterinaryClinic.Contracts.Veterinarians;
 using VeterinaryClinic.Shared;
+using static System.Net.Mime.MediaTypeNames.Application;
 
 namespace VeterinaryClinic.Api.Controllers;
 
@@ -18,7 +18,7 @@ namespace VeterinaryClinic.Api.Controllers;
 /// <param name="service">Служба аналитических запросов.</param>
 [ApiController]
 [Route("api/analytics")]
-[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError, ProblemJson)]
 public class AnalyticsController(IAnalyticsService service) : ControllerBase
 {
     /// <summary>
@@ -29,7 +29,7 @@ public class AnalyticsController(IAnalyticsService service) : ControllerBase
     /// <returns>Подходящие врачи.</returns>
     [HttpGet("veterinarians")]
     [ProducesResponseType(typeof(IReadOnlyList<VeterinarianDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest, ProblemJson)]
     public async Task<ActionResult<IReadOnlyList<VeterinarianDto>>> GetVeterinarians(
         [FromQuery, BindRequired, EnumDataType(typeof(AnimalSpecies))] AnimalSpecies species,
         CancellationToken cancellationToken)
@@ -45,8 +45,8 @@ public class AnalyticsController(IAnalyticsService service) : ControllerBase
     /// <returns>Питомцы врача.</returns>
     [HttpGet("pets")]
     [ProducesResponseType(typeof(IReadOnlyList<PetDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest, ProblemJson)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, ProblemJson)]
     public async Task<ActionResult<IReadOnlyList<PetDto>>> GetPets(
         [FromQuery, BindRequired, Range(1, int.MaxValue)] int veterinarianId,
         CancellationToken cancellationToken)
@@ -62,8 +62,8 @@ public class AnalyticsController(IAnalyticsService service) : ControllerBase
     /// <returns>Количество повторных приёмов.</returns>
     [HttpGet("follow-up-count")]
     [ProducesResponseType(typeof(FollowUpCountDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest, ProblemJson)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, ProblemJson)]
     public async Task<ActionResult<FollowUpCountDto>> GetFollowUpCount(
         [FromQuery, BindRequired, Range(1, int.MaxValue)] int breedId,
         CancellationToken cancellationToken)
@@ -75,10 +75,10 @@ public class AnalyticsController(IAnalyticsService service) : ControllerBase
     /// Возвращает владельцев нескольких питомцев, по ФИО.
     /// </summary>
     /// <param name="cancellationToken">Сигнал отмены запроса.</param>
-    /// <returns>Владельцы более одного питомца.</returns>
+    /// <returns>Владельцы и количество питомцев у каждого.</returns>
     [HttpGet("owners-with-multiple-pets")]
-    [ProducesResponseType(typeof(IReadOnlyList<OwnerDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IReadOnlyList<OwnerDto>>> GetOwnersWithMultiplePets(
+    [ProducesResponseType(typeof(IReadOnlyList<OwnerWithPetCountDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<OwnerWithPetCountDto>>> GetOwnersWithMultiplePets(
         CancellationToken cancellationToken)
     {
         return Ok(await service.GetOwnersWithMultiplePetsAsync(cancellationToken));
@@ -88,15 +88,15 @@ public class AnalyticsController(IAnalyticsService service) : ControllerBase
     /// Возвращает приёмы кабинета за месяц от выбранной даты, по времени.
     /// </summary>
     /// <param name="asOfDate">Начальная дата, включаемая в выборку.</param>
-    /// <param name="roomNumber">Номер кабинета.</param>
+    /// <param name="roomNumber">Номер кабинета: от 1 до 20 символов после удаления пробелов по краям.</param>
     /// <param name="cancellationToken">Сигнал отмены запроса.</param>
     /// <returns>Приёмы до той же даты следующего месяца, не включая её.</returns>
     [HttpGet("appointments")]
     [ProducesResponseType(typeof(IReadOnlyList<AppointmentDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest, ProblemJson)]
     public async Task<ActionResult<IReadOnlyList<AppointmentDto>>> GetAppointments(
         [FromQuery, BindRequired] DateOnly asOfDate,
-        [FromQuery, Required, StringLength(20), NoNullCharacters] string roomNumber,
+        [FromQuery, Required, RoomNumberLength, NoNullCharacters] string roomNumber,
         CancellationToken cancellationToken)
     {
         return Ok(await service.GetAppointmentsAsync(asOfDate, roomNumber, cancellationToken));

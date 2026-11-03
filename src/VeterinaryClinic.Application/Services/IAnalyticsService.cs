@@ -1,6 +1,5 @@
 using VeterinaryClinic.Contracts.Analytics;
 using VeterinaryClinic.Contracts.Appointments;
-using VeterinaryClinic.Contracts.Owners;
 using VeterinaryClinic.Contracts.Pets;
 using VeterinaryClinic.Contracts.Veterinarians;
 using VeterinaryClinic.Shared;
@@ -42,8 +41,8 @@ public interface IAnalyticsService
     /// Возвращает владельцев нескольких питомцев, по ФИО.
     /// </summary>
     /// <param name="cancellationToken">Сигнал отмены запроса.</param>
-    /// <returns>Владельцы более одного питомца.</returns>
-    public Task<IReadOnlyList<OwnerDto>> GetOwnersWithMultiplePetsAsync(CancellationToken cancellationToken);
+    /// <returns>Владельцы и количество питомцев у каждого.</returns>
+    public Task<IReadOnlyList<OwnerWithPetCountDto>> GetOwnersWithMultiplePetsAsync(CancellationToken cancellationToken);
 
     /// <summary>
     /// Возвращает приёмы кабинета за месяц от выбранной даты, по времени.

@@ -1,5 +1,7 @@
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.EntityFrameworkCore;
+using VeterinaryClinic.Api;
 using VeterinaryClinic.Api.Errors;
 using VeterinaryClinic.Api.Filters;
 using VeterinaryClinic.Application;
@@ -30,6 +32,7 @@ builder.Services.AddClinicServices();
 builder.Services.AddScoped<RequestLoggingFilter>();
 builder.Services.AddControllers(options =>
     {
+        options.OutputFormatters.RemoveType<StringOutputFormatter>();
         options.Filters.AddService<RequestLoggingFilter>(int.MinValue);
         if (provider == "PostgreSQL")
         {
@@ -38,7 +41,7 @@ builder.Services.AddControllers(options =>
     })
     .AddJsonOptions(options =>
     {
-        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        options.JsonSerializerOptions.Converters.Add(new AnimalSpeciesJsonConverter());
         options.JsonSerializerOptions.NumberHandling = JsonNumberHandling.Strict;
     });
 builder.Services.ConfigureHttpJsonOptions(options =>

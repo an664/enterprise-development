@@ -20,6 +20,7 @@ public static class PostgreSqlServiceCollectionExtensions
         public IServiceCollection AddPostgreSqlRepositories(string connectionString)
         {
             services.AddDbContext<ClinicDbContext>(options => options.UseNpgsql(connectionString));
+            services.AddHealthChecks().AddDbContextCheck<ClinicDbContext>();
             services.AddScoped<IOwnerRepository, OwnerRepository>();
             services.AddScoped<IBreedRepository, BreedRepository>();
             services.AddScoped<IPetRepository, PetRepository>();

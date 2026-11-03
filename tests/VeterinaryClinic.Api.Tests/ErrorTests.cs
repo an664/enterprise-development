@@ -47,6 +47,35 @@ public class ErrorTests
     }
 
     /// <summary>
+    /// Создаёт и находит приём по номеру предельной длины с пробелами по краям.
+    /// </summary>
+    [Fact]
+    public async Task RoomNumber_IgnoresOuterSpacesAtLengthLimit()
+    {
+        using var factory = new ClinicApiFactory();
+        using var client = factory.CreateClient();
+        var token = TestContext.Current.CancellationToken;
+        var roomNumber = new string('А', 20);
+        var request = new
+        {
+            PetId = 1,
+            VeterinarianId = 1,
+            StartsAt = new DateTime(2027, 4, 18, 10, 0, 0),
+            RoomNumber = $" {roomNumber} "
+        };
+
+        using var create = await client.PostAsJsonAsync("/api/appointments", request, token);
+        Assert.Equal(HttpStatusCode.Created, create.StatusCode);
+        var created = await ReadJson(create);
+        Assert.Equal(roomNumber, created.GetProperty("roomNumber").GetString());
+
+        var encodedRoom = Uri.EscapeDataString(request.RoomNumber);
+        var appointments = await GetJson(client, $"/api/analytics/appointments?asOfDate=2027-04-01&roomNumber={encodedRoom}");
+        var foundId = Assert.Single(Ids(appointments));
+        Assert.Equal(created.GetProperty("id").GetInt32(), foundId);
+    }
+
+    /// <summary>
     /// Проверяет отклонение неверных значений и отсутствующих связанных записей.
     /// </summary>
     /// <param name="resource">Имя ресурса API.</param>
@@ -279,6 +308,17 @@ public class ErrorTests
             "petId": 1,
             "veterinarianId": 1,
             "startsAt": "2026-09-15T10:00:00",
+            "roomNumber": "123456789012345678901"
+        }
+        """,
+        HttpStatusCode.BadRequest)]
+    [InlineData(
+        "appointments",
+        """
+        {
+            "petId": 1,
+            "veterinarianId": 1,
+            "startsAt": "2026-09-15T10:00:00",
             "roomNumber": " "
         }
         """,
@@ -337,6 +377,8 @@ public class ErrorTests
     [Theory]
     [InlineData("owners/0")]
     [InlineData("breeds/by-species/999")]
+    [InlineData("breeds/by-species/Dog%2C%20Rabbit")]
+    [InlineData("analytics/veterinarians?species=Dog%2C%20Rabbit")]
     [InlineData("analytics/veterinarians")]
     [InlineData("analytics/veterinarians?species=999")]
     [InlineData("analytics/pets")]
@@ -345,6 +387,8 @@ public class ErrorTests
     [InlineData("analytics/follow-up-count?breedId=0")]
     [InlineData("analytics/appointments?roomNumber=101А")]
     [InlineData("analytics/appointments?asOfDate=2026-09-15")]
+    [InlineData("analytics/appointments?asOfDate=2026-09-15&roomNumber=%20%20")]
+    [InlineData("analytics/appointments?asOfDate=2026-09-15&roomNumber=123456789012345678901")]
     [InlineData("analytics/appointments?asOfDate=invalid&roomNumber=101А")]
     [InlineData("analytics/appointments?asOfDate=0001-01-01&roomNumber=101А")]
     [InlineData("analytics/appointments?asOfDate=9999-12-01&roomNumber=101А")]
@@ -392,6 +436,26 @@ public class ErrorTests
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+    }
+
+    /// <summary>
+    /// Не позволяет записать сочетание видов как третье значение перечисления.
+    /// </summary>
+    /// <param name="resource">Ресурс со свойством вида животного.</param>
+    [Theory]
+    [InlineData("breeds")]
+    [InlineData("specializations")]
+    public async Task MultipleSpecies_ReturnsBadRequest(string resource)
+    {
+        using var factory = new ClinicApiFactory();
+        using var client = factory.CreateClient();
+
+        using var response = await client.PostAsJsonAsync(
+            $"/api/{resource}",
+            new { Name = "Проверка вида", Species = "Dog, Rabbit" },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     /// <summary>

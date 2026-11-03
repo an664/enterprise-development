@@ -4,6 +4,7 @@ using VeterinaryClinic.Application.Services;
 using VeterinaryClinic.Contracts.Breeds;
 using VeterinaryClinic.Contracts.Pets;
 using VeterinaryClinic.Shared;
+using static System.Net.Mime.MediaTypeNames.Application;
 
 namespace VeterinaryClinic.Api.Controllers;
 
@@ -13,7 +14,7 @@ namespace VeterinaryClinic.Api.Controllers;
 /// <param name="service">Служба работы с данными пород.</param>
 [ApiController]
 [Route("api/breeds")]
-[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError, ProblemJson)]
 public class BreedsController(IBreedService service) : ControllerBase
 {
     /// <summary>
@@ -36,8 +37,8 @@ public class BreedsController(IBreedService service) : ControllerBase
     /// <returns>Результат операции.</returns>
     [HttpGet("{id:int}")]
     [ProducesResponseType(typeof(BreedDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest, ProblemJson)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, ProblemJson)]
     public async Task<ActionResult<BreedDto>> GetById(
         [Range(1, int.MaxValue)] int id,
         CancellationToken cancellationToken)
@@ -53,7 +54,8 @@ public class BreedsController(IBreedService service) : ControllerBase
     /// <returns>Созданная запись и ссылка на неё.</returns>
     [HttpPost]
     [ProducesResponseType(typeof(BreedDto), StatusCodes.Status201Created)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest, ProblemJson)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict, ProblemJson)]
     public async Task<ActionResult<BreedDto>> Create(
         [FromBody] BreedRequest request,
         CancellationToken cancellationToken)
@@ -71,8 +73,9 @@ public class BreedsController(IBreedService service) : ControllerBase
     /// <returns>Подтверждение изменения без тела ответа.</returns>
     [HttpPut("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest, ProblemJson)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, ProblemJson)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict, ProblemJson)]
     public async Task<ActionResult> Update(
         [Range(1, int.MaxValue)] int id,
         [FromBody] BreedRequest request,
@@ -90,8 +93,8 @@ public class BreedsController(IBreedService service) : ControllerBase
     /// <returns>Подтверждение удаления без тела ответа.</returns>
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest, ProblemJson)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict, ProblemJson)]
     public async Task<ActionResult> Delete([Range(1, int.MaxValue)] int id, CancellationToken cancellationToken)
     {
         await service.DeleteAsync(id, cancellationToken);
@@ -106,8 +109,8 @@ public class BreedsController(IBreedService service) : ControllerBase
     /// <returns>Результат операции.</returns>
     [HttpGet("{id:int}/pets")]
     [ProducesResponseType(typeof(IReadOnlyList<PetDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest, ProblemJson)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, ProblemJson)]
     public async Task<ActionResult<IReadOnlyList<PetDto>>> GetPets(
         [Range(1, int.MaxValue)] int id,
         CancellationToken cancellationToken)
@@ -123,7 +126,7 @@ public class BreedsController(IBreedService service) : ControllerBase
     /// <returns>Породы выбранного вида.</returns>
     [HttpGet("by-species/{species}")]
     [ProducesResponseType(typeof(IReadOnlyList<BreedDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest, ProblemJson)]
     public async Task<ActionResult<IReadOnlyList<BreedDto>>> GetBySpecies(
         [EnumDataType(typeof(AnimalSpecies))] AnimalSpecies species,
         CancellationToken cancellationToken)

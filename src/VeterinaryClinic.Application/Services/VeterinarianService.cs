@@ -49,7 +49,6 @@ public class VeterinarianService(
     /// <inheritdoc />
     public async Task UpdateAsync(int id, VeterinarianRequest request, CancellationToken cancellationToken)
     {
-        _ = await FindAsync(id, cancellationToken);
         var entity = await BuildVeterinarianAsync(id, request, cancellationToken);
 
         if (!await repository.UpdateAsync(entity, cancellationToken))

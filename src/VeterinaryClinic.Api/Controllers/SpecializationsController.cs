@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using VeterinaryClinic.Application.Services;
 using VeterinaryClinic.Contracts.Specializations;
 using VeterinaryClinic.Contracts.Veterinarians;
+using static System.Net.Mime.MediaTypeNames.Application;
 
 namespace VeterinaryClinic.Api.Controllers;
 
@@ -12,7 +13,7 @@ namespace VeterinaryClinic.Api.Controllers;
 /// <param name="service">Служба работы с данными специализаций.</param>
 [ApiController]
 [Route("api/specializations")]
-[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError, ProblemJson)]
 public class SpecializationsController(ISpecializationService service) : ControllerBase
 {
     /// <summary>
@@ -35,8 +36,8 @@ public class SpecializationsController(ISpecializationService service) : Control
     /// <returns>Результат операции.</returns>
     [HttpGet("{id:int}")]
     [ProducesResponseType(typeof(SpecializationDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest, ProblemJson)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, ProblemJson)]
     public async Task<ActionResult<SpecializationDto>> GetById(
         [Range(1, int.MaxValue)] int id,
         CancellationToken cancellationToken)
@@ -52,7 +53,8 @@ public class SpecializationsController(ISpecializationService service) : Control
     /// <returns>Созданная запись и ссылка на неё.</returns>
     [HttpPost]
     [ProducesResponseType(typeof(SpecializationDto), StatusCodes.Status201Created)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest, ProblemJson)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict, ProblemJson)]
     public async Task<ActionResult<SpecializationDto>> Create(
         [FromBody] SpecializationRequest request,
         CancellationToken cancellationToken)
@@ -70,8 +72,9 @@ public class SpecializationsController(ISpecializationService service) : Control
     /// <returns>Подтверждение изменения без тела ответа.</returns>
     [HttpPut("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest, ProblemJson)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, ProblemJson)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict, ProblemJson)]
     public async Task<ActionResult> Update(
         [Range(1, int.MaxValue)] int id,
         [FromBody] SpecializationRequest request,
@@ -89,8 +92,8 @@ public class SpecializationsController(ISpecializationService service) : Control
     /// <returns>Подтверждение удаления без тела ответа.</returns>
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest, ProblemJson)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict, ProblemJson)]
     public async Task<ActionResult> Delete([Range(1, int.MaxValue)] int id, CancellationToken cancellationToken)
     {
         await service.DeleteAsync(id, cancellationToken);
@@ -105,8 +108,8 @@ public class SpecializationsController(ISpecializationService service) : Control
     /// <returns>Результат операции.</returns>
     [HttpGet("{id:int}/veterinarians")]
     [ProducesResponseType(typeof(IReadOnlyList<VeterinarianDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest, ProblemJson)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, ProblemJson)]
     public async Task<ActionResult<IReadOnlyList<VeterinarianDto>>> GetVeterinarians(
         [Range(1, int.MaxValue)] int id,
         CancellationToken cancellationToken)

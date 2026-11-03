@@ -21,14 +21,14 @@ public class AppointmentRequest
     public required int VeterinarianId { get; init; }
 
     /// <summary>
-    /// Местные дата и время приёма без смещения UTC, с точностью до микросекунд.
+    /// Местные дата и время приёма без смещения UTC. Точность хранения - одна микросекунда.
     /// </summary>
     public required DateTime StartsAt { get; init; }
 
     /// <summary>
-    /// Номер кабинета.
+    /// Номер кабинета: от 1 до 20 символов после удаления пробелов по краям.
     /// </summary>
-    [Required, StringLength(20), NoNullCharacters]
+    [Required, RoomNumberLength, NoNullCharacters]
     public required string RoomNumber { get; init; }
 
     /// <summary>

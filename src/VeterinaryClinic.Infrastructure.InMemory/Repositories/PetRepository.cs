@@ -12,16 +12,23 @@ namespace VeterinaryClinic.Infrastructure.InMemory.Repositories;
 /// <param name="breeds">Записи пород.</param>
 /// <param name="pets">Записи питомцев.</param>
 /// <param name="appointments">Записи приёмов.</param>
+/// <param name="locks">Блокировки коллекций хранилища.</param>
 internal class PetRepository(
     Dictionary<int, Owner> owners,
     Dictionary<int, Breed> breeds,
     Dictionary<int, Pet> pets,
-    Dictionary<int, Appointment> appointments) : IPetRepository
+    Dictionary<int, Appointment> appointments,
+    TableLocks locks) : IPetRepository
 {
     /// <summary>
-    /// Коллекции, из которых берутся данные для полной копии записи.
+    /// Блокировки коллекций, из которых копируются данные записи.
     /// </summary>
-    private readonly object[] _snapshotTables = [owners, breeds, pets];
+    private readonly Lock[] _snapshotLocks = [locks.Owners, locks.Breeds, locks.Pets];
+
+    /// <summary>
+    /// Блокировки для операций, которым нужны и данные питомцев, и их приёмы.
+    /// </summary>
+    private readonly Lock[] _petAndAppointmentLocks = [locks.Owners, locks.Breeds, locks.Pets, locks.Appointments];
 
     /// <summary>
     /// Следующий свободный идентификатор.
@@ -31,25 +38,32 @@ internal class PetRepository(
     /// <inheritdoc />
     public Task<IReadOnlyList<Pet>> GetAllAsync(CancellationToken cancellationToken)
     {
-        return TableLocks.RunAsync<IReadOnlyList<Pet>>(_snapshotTables, cancellationToken, () =>
+        return TableLocks.RunAsync<IReadOnlyList<Pet>>(_snapshotLocks, cancellationToken, () =>
             pets.Values.OrderBy(record => record.Id).Select(EntitySnapshot.Copy).ToList());
     }
 
     /// <inheritdoc />
     public Task<Pet?> GetByIdAsync(int id, CancellationToken cancellationToken)
     {
-        return TableLocks.RunAsync<Pet?>(_snapshotTables, cancellationToken, () =>
+        return TableLocks.RunAsync<Pet?>(_snapshotLocks, cancellationToken, () =>
             pets.TryGetValue(id, out var record) ? EntitySnapshot.Copy(record) : null);
     }
 
     /// <inheritdoc />
     public Task<Pet> AddAsync(Pet entity, CancellationToken cancellationToken)
     {
-        return TableLocks.RunAsync(_snapshotTables, cancellationToken, () =>
+        return TableLocks.RunAsync(_snapshotLocks, cancellationToken, () =>
         {
-            var stored = EntitySnapshot.Copy(entity);
-            BindReferences(stored);
-            stored.Id = _nextId++;
+            var (breed, owner) = GetBreedAndOwner(entity);
+            var stored = new Pet
+            {
+                Id = _nextId++,
+                Name = entity.Name,
+                Breed = breed,
+                Owner = owner,
+                BirthDate = entity.BirthDate,
+                Weight = entity.Weight
+            };
             pets.Add(stored.Id, stored);
             return EntitySnapshot.Copy(stored);
         });
@@ -58,27 +72,26 @@ internal class PetRepository(
     /// <inheritdoc />
     public Task<bool> UpdateAsync(Pet entity, CancellationToken cancellationToken)
     {
-        return TableLocks.RunAsync([owners, breeds, pets, appointments], cancellationToken, () =>
+        return TableLocks.RunAsync(_petAndAppointmentLocks, cancellationToken, () =>
         {
             if (!pets.TryGetValue(entity.Id, out var current))
             {
                 return false;
             }
 
-            var updated = EntitySnapshot.Copy(entity);
-            BindReferences(updated);
-            if (updated.BirthDate > current.BirthDate
-                && appointments.Values.Any(visit => visit.Pet.Id == updated.Id
-                    && DateOnly.FromDateTime(visit.StartsAt) < updated.BirthDate))
+            var (breed, owner) = GetBreedAndOwner(entity);
+            if (entity.BirthDate > current.BirthDate
+                && appointments.Values.Any(visit => visit.Pet.Id == entity.Id
+                    && DateOnly.FromDateTime(visit.StartsAt) < entity.BirthDate))
             {
                 throw new ValidationException("Дата рождения не может быть позже существующего приёма питомца.");
             }
 
-            current.Name = updated.Name;
-            current.Breed = updated.Breed;
-            current.Owner = updated.Owner;
-            current.BirthDate = updated.BirthDate;
-            current.Weight = updated.Weight;
+            current.Name = entity.Name;
+            current.Breed = breed;
+            current.Owner = owner;
+            current.BirthDate = entity.BirthDate;
+            current.Weight = entity.Weight;
             return true;
         });
     }
@@ -86,7 +99,7 @@ internal class PetRepository(
     /// <inheritdoc />
     public Task<bool> DeleteAsync(int id, CancellationToken cancellationToken)
     {
-        return TableLocks.RunAsync([pets, appointments], cancellationToken, () =>
+        return TableLocks.RunAsync([locks.Pets, locks.Appointments], cancellationToken, () =>
         {
             if (appointments.Values.Any(record => record.Pet.Id == id))
             {
@@ -100,7 +113,7 @@ internal class PetRepository(
     /// <inheritdoc />
     public Task<IReadOnlyList<Pet>> GetByOwnerAsync(int ownerId, CancellationToken cancellationToken)
     {
-        return TableLocks.RunAsync<IReadOnlyList<Pet>>(_snapshotTables, cancellationToken, () =>
+        return TableLocks.RunAsync<IReadOnlyList<Pet>>(_snapshotLocks, cancellationToken, () =>
             pets.Values
                 .Where(pet => pet.Owner.Id == ownerId)
                 .OrderBy(record => record.Id)
@@ -111,7 +124,7 @@ internal class PetRepository(
     /// <inheritdoc />
     public Task<IReadOnlyList<Pet>> GetByBreedAsync(int breedId, CancellationToken cancellationToken)
     {
-        return TableLocks.RunAsync<IReadOnlyList<Pet>>(_snapshotTables, cancellationToken, () =>
+        return TableLocks.RunAsync<IReadOnlyList<Pet>>(_snapshotLocks, cancellationToken, () =>
             pets.Values
                 .Where(pet => pet.Breed.Id == breedId)
                 .OrderBy(record => record.Id)
@@ -122,7 +135,7 @@ internal class PetRepository(
     /// <inheritdoc />
     public Task<IReadOnlyList<Pet>> GetByVeterinarianAsync(int veterinarianId, CancellationToken cancellationToken)
     {
-        return TableLocks.RunAsync<IReadOnlyList<Pet>>([owners, breeds, pets, appointments], cancellationToken, () =>
+        return TableLocks.RunAsync<IReadOnlyList<Pet>>(_petAndAppointmentLocks, cancellationToken, () =>
             appointments.Values
                 .Where(visit => visit.Veterinarian.Id == veterinarianId)
                 .Select(visit => visit.Pet)
@@ -134,13 +147,14 @@ internal class PetRepository(
     }
 
     /// <summary>
-    /// Связывает запись с актуальными объектами, пока их нельзя удалить или изменить.
+    /// Находит породу и владельца питомца в хранилище.
     /// </summary>
-    private void BindReferences(Pet entity)
+    private (Breed Breed, Owner Owner) GetBreedAndOwner(Pet entity)
     {
-        entity.Breed = breeds.GetValueOrDefault(entity.Breed.Id)
+        var breed = breeds.GetValueOrDefault(entity.Breed.Id)
             ?? throw new EntityNotFoundException("Связанная запись породы не найдена.");
-        entity.Owner = owners.GetValueOrDefault(entity.Owner.Id)
+        var owner = owners.GetValueOrDefault(entity.Owner.Id)
             ?? throw new EntityNotFoundException("Связанная запись владельца не найдена.");
+        return (breed, owner);
     }
 }
