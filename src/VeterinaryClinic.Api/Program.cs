@@ -19,9 +19,7 @@ switch (provider)
         builder.Services.AddInMemoryRepositories();
         break;
     case "PostgreSQL":
-        var connectionString = builder.Configuration.GetConnectionString("clinic")
-            ?? throw new InvalidOperationException("Для подключения к PostgreSQL запустите VeterinaryClinic.AppHost.");
-        builder.Services.AddPostgreSqlRepositories(connectionString);
+        builder.AddPostgreSqlRepositories("clinic");
         builder.Services.AddScoped<WriteTransactionFilter>();
         break;
     default:

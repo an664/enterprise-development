@@ -38,7 +38,7 @@ public class AnalyticsController(IAnalyticsService service) : ControllerBase
     }
 
     /// <summary>
-    /// Возвращает питомцев выбранного врача без повторов, по кличке.
+    /// Возвращает питомцев выбранного врача без повторов, отсортированных по кличке.
     /// </summary>
     /// <param name="veterinarianId">Идентификатор врача.</param>
     /// <param name="cancellationToken">Сигнал отмены запроса.</param>

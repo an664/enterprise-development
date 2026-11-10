@@ -9,7 +9,7 @@ if (builder.Configuration.GetValue("UseVolumes", true))
 
 var clinic = postgres.AddDatabase("clinic");
 builder.AddProject<Projects.VeterinaryClinic_Api>("api")
-    .WithEndpoint("http", endpoint => endpoint.Port = null)
+    .WithUrlForEndpoint("http", url => url.DisplayText = "Swagger UI")
     .WithReference(clinic)
     .WaitFor(clinic)
     .WithHttpHealthCheck("/health");
